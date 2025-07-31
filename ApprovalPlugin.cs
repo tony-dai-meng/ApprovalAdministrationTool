@@ -22,7 +22,7 @@ namespace ApprovalAdministrationTool
         ExportMetadata("BackgroundColor", "Lavender"),//"Lavender"),
         ExportMetadata("PrimaryFontColor", "Black"),
         ExportMetadata("SecondaryFontColor", "Gray")]
-    public class MyPlugin : PluginBase
+    public class ApprovalPlugin : PluginBase
     {
         public override IXrmToolBoxPluginControl GetControl()
         {
@@ -32,7 +32,7 @@ namespace ApprovalAdministrationTool
         /// <summary>
         /// Constructor 
         /// </summary>
-        public MyPlugin()
+        public ApprovalPlugin()
         {
             // If you have external assemblies that you need to load, uncomment the following to 
             // hook into the event that will fire when an Assembly fails to resolve
@@ -42,7 +42,7 @@ namespace ApprovalAdministrationTool
         /// <summary>
         /// Event fired by CLR when an assembly reference fails to load
         /// Assumes that related assemblies will be loaded from a subfolder named the same as the Plugin
-        /// For example, a folder named Sample.XrmToolBox.MyPlugin 
+        /// For example, a folder named Sample.XrmToolBox.ApprovalPlugin 
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="args"></param>

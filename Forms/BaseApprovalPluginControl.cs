@@ -19,8 +19,9 @@ namespace ApprovalAdministrationTool
 {
     public partial class BaseApprovalPluginControl : PluginControlBase
     {
-        private Settings mySettings;
-
+        private Settings mySettings; // initialise settings for the plugin
+        private DataTable myApprovals; // initialise approvals DataTable
+        private DataTable mySimpleApprovals; //initialise approvals for a simpile view
         public BaseApprovalPluginControl()
         {
             InitializeComponent();
@@ -29,7 +30,7 @@ namespace ApprovalAdministrationTool
         private void MyPluginControl_Load(object sender, EventArgs e)
         {
             ExecuteMethod(WhoAmI);
-            ShowInfoNotification("This is a notification that can lead to XrmToolBox repository", new Uri("https://github.com/MscrmTools/XrmToolBox"));
+            //ShowInfoNotification("This is a notification that can lead to XrmToolBox repository", new Uri("https://github.com/MscrmTools/XrmToolBox"));
 
             // Loads or creates the settings for the plugin
             if (!SettingsManager.Instance.TryLoad(GetType(), out mySettings))
@@ -41,6 +42,7 @@ namespace ApprovalAdministrationTool
             {
                 //LogInfo("Settings found and loaded");
             }
+            ExecuteMethod(GetAccounts);
         }
 
         private void WhoAmI()
@@ -53,11 +55,12 @@ namespace ApprovalAdministrationTool
             CloseTool();
         }
 
-        private void tsbSample_Click(object sender, EventArgs e)
+        private void buttonResetSettings_Click(object sender, EventArgs e)
         {
-            // The ExecuteMethod method handles connecting to an
-            // organization if XrmToolBox is not yet connected
-            ExecuteMethod(GetAccounts);
+            // Reset settings to default
+            mySettings = new Settings();
+            SettingsManager.Instance.Save(GetType(), mySettings);
+            MessageBox.Show("Settings have been reset to default.", "Settings Reset", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void GetAccounts()
@@ -67,7 +70,25 @@ namespace ApprovalAdministrationTool
                 Message = "Getting approvals",
                 Work = (worker, args) =>
                 {
-                    args.Result = Service.RetrieveMultiple(new QueryExpression("msdyn_flow_approval") { });
+                    // Instantiate QueryExpression query
+                    QueryExpression query = new QueryExpression("msdyn_flow_approval");
+
+                    // Add columns to query.ColumnSet
+                    query.ColumnSet.AddColumns(
+                        "msdyn_flow_approvalid",
+                        "msdyn_flow_approval_title",
+                        "msdyn_flow_approval_allowcancel",
+                        "msdyn_flow_approval_allowreassign",
+                        "msdyn_flow_approval_modeltype",
+                        "msdyn_flow_approval_itemlink",
+                        "msdyn_flow_approval_itemlinkdescription",
+                        "msdyn_flow_approval_requesttype",
+                        "msdyn_flow_approval_priority",
+                        "msdyn_flow_approval_sendemail",
+                        "msdyn_flow_approval_source",
+                        "msdyn_flow_approval_stage");
+
+                    args.Result = Service.RetrieveMultiple(query);
                 },
                 PostWorkCallBack = (args) =>
                 {
@@ -78,11 +99,55 @@ namespace ApprovalAdministrationTool
                     var result = args.Result as EntityCollection;
                     if (result != null)
                     {
-                        MessageBox.Show($"Found {result.Entities.Count} accounts");
-
+                        MessageBox.Show($"Found {result.Entities.Count} approvals");
+                        myApprovals = GetDataTableFromEntityCollection(result);
+                        if (myApprovals.Rows.Count > 0)
+                        {
+                            bindTable(ApprovalGridView, myApprovals);
+                        }
+                        else
+                        {
+                            MessageBox.Show("No approvals found or the DataTable is empty.");
+                        }
                     }
                 }
             });
+        }
+
+        private void bindTable(DataGridView dataGridView, DataTable dataTable)
+        {
+            if (dataTable != null && dataTable.Rows.Count > 0)
+            {
+                dataGridView.DataSource = dataTable;
+                
+                // Set the column headers to be more user-friendly
+                foreach (DataGridViewColumn column in ApprovalGridView.Columns)
+                {
+                    switch (column.Name)
+                    {
+                        case "msdyn_flow_approvalid":
+                            column.HeaderText = "Approval ID";
+                            break;
+                        case "msdyn_name":
+                            column.HeaderText = "Approval Name";
+                            break;
+                        case "msdyn_flowname":
+                            column.HeaderText = "Flow Name";
+                            break;
+                        case "msdyn_status":
+                            column.HeaderText = "Status";
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                
+                dataGridView.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
+            }
+            else
+            {
+                MessageBox.Show("No data available to bind to the DataGridView.");
+            }
         }
 
         /// <summary>

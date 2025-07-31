@@ -31,12 +31,14 @@
             this.toolStripMenu = new System.Windows.Forms.ToolStrip();
             this.tsbClose = new System.Windows.Forms.ToolStripButton();
             this.tssSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.tsbSample = new System.Windows.Forms.ToolStripButton();
+            this.buttonResetSettings = new System.Windows.Forms.ToolStripButton();
             this.ApprovalGridView = new System.Windows.Forms.DataGridView();
             this.label1 = new System.Windows.Forms.Label();
             this.webResourceContainer = new System.Windows.Forms.WebBrowser();
+            this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.toolStripMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.ApprovalGridView)).BeginInit();
+            this.tableLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
             // 
             // toolStripMenu
@@ -45,7 +47,7 @@
             this.toolStripMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.tsbClose,
             this.tssSeparator1,
-            this.tsbSample});
+            this.buttonResetSettings});
             this.toolStripMenu.Location = new System.Drawing.Point(0, 0);
             this.toolStripMenu.Name = "toolStripMenu";
             this.toolStripMenu.Size = new System.Drawing.Size(732, 25);
@@ -66,25 +68,35 @@
             this.tssSeparator1.Name = "tssSeparator1";
             this.tssSeparator1.Size = new System.Drawing.Size(6, 25);
             // 
-            // tsbSample
+            // buttonResetSettings
             // 
-            this.tsbSample.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.tsbSample.Name = "tsbSample";
-            this.tsbSample.Size = new System.Drawing.Size(47, 22);
-            this.tsbSample.Text = "Try me";
-            this.tsbSample.Click += new System.EventHandler(this.tsbSample_Click);
+            this.buttonResetSettings.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.buttonResetSettings.Name = "buttonResetSettings";
+            this.buttonResetSettings.Size = new System.Drawing.Size(83, 22);
+            this.buttonResetSettings.Text = "Reset settings";
+            this.buttonResetSettings.ToolTipText = "Reset settings";
+            this.buttonResetSettings.Click += new System.EventHandler(this.buttonResetSettings_Click);
             // 
             // ApprovalGridView
             // 
+            this.ApprovalGridView.AllowUserToAddRows = false;
+            this.ApprovalGridView.AllowUserToDeleteRows = false;
+            this.ApprovalGridView.AllowUserToOrderColumns = true;
+            this.ApprovalGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.ApprovalGridView.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
             this.ApprovalGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.ApprovalGridView.Location = new System.Drawing.Point(7, 78);
+            this.ApprovalGridView.Location = new System.Drawing.Point(2, 2);
             this.ApprovalGridView.Margin = new System.Windows.Forms.Padding(2);
             this.ApprovalGridView.Name = "ApprovalGridView";
+            this.ApprovalGridView.ReadOnly = true;
             this.ApprovalGridView.RowHeadersWidth = 51;
+            this.tableLayoutPanel1.SetRowSpan(this.ApprovalGridView, 3);
             this.ApprovalGridView.RowTemplate.Height = 24;
-            this.ApprovalGridView.Size = new System.Drawing.Size(338, 519);
+            this.ApprovalGridView.Size = new System.Drawing.Size(429, 544);
             this.ApprovalGridView.TabIndex = 5;
+            this.ApprovalGridView.TabStop = false;
             // 
             // label1
             // 
@@ -104,22 +116,44 @@
             this.webResourceContainer.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.webResourceContainer.Location = new System.Drawing.Point(349, 78);
+            this.tableLayoutPanel1.SetColumnSpan(this.webResourceContainer, 3);
+            this.webResourceContainer.Location = new System.Drawing.Point(435, 2);
             this.webResourceContainer.Margin = new System.Windows.Forms.Padding(2);
             this.webResourceContainer.MinimumSize = new System.Drawing.Size(15, 16);
             this.webResourceContainer.Name = "webResourceContainer";
-            this.webResourceContainer.Size = new System.Drawing.Size(365, 239);
+            this.webResourceContainer.Size = new System.Drawing.Size(285, 504);
             this.webResourceContainer.TabIndex = 7;
             this.webResourceContainer.Url = new System.Uri("https://www.google.com", System.UriKind.Absolute);
             this.webResourceContainer.DocumentCompleted += new System.Windows.Forms.WebBrowserDocumentCompletedEventHandler(this.webBrowser1_DocumentCompleted);
+            // 
+            // tableLayoutPanel1
+            // 
+            this.tableLayoutPanel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.tableLayoutPanel1.ColumnCount = 4;
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 60.006F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.33133F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.33133F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.33133F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+            this.tableLayoutPanel1.Controls.Add(this.ApprovalGridView, 0, 0);
+            this.tableLayoutPanel1.Controls.Add(this.webResourceContainer, 1, 0);
+            this.tableLayoutPanel1.Location = new System.Drawing.Point(7, 49);
+            this.tableLayoutPanel1.Name = "tableLayoutPanel1";
+            this.tableLayoutPanel1.RowCount = 3;
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 0F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 40F));
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(722, 548);
+            this.tableLayoutPanel1.TabIndex = 8;
             // 
             // BaseApprovalPluginControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.webResourceContainer);
+            this.Controls.Add(this.tableLayoutPanel1);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.ApprovalGridView);
             this.Controls.Add(this.toolStripMenu);
             this.Name = "BaseApprovalPluginControl";
             this.Size = new System.Drawing.Size(732, 600);
@@ -127,6 +161,7 @@
             this.toolStripMenu.ResumeLayout(false);
             this.toolStripMenu.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.ApprovalGridView)).EndInit();
+            this.tableLayoutPanel1.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -135,10 +170,11 @@
         #endregion
         private System.Windows.Forms.ToolStrip toolStripMenu;
         private System.Windows.Forms.ToolStripButton tsbClose;
-        private System.Windows.Forms.ToolStripButton tsbSample;
+        private System.Windows.Forms.ToolStripButton buttonResetSettings;
         private System.Windows.Forms.ToolStripSeparator tssSeparator1;
         private System.Windows.Forms.DataGridView ApprovalGridView;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.WebBrowser webResourceContainer;
+        private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
     }
 }
