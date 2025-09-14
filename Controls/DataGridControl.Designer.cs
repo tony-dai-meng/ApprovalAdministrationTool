@@ -37,18 +37,14 @@
             this.ApprovalGridView.AllowUserToAddRows = false;
             this.ApprovalGridView.AllowUserToDeleteRows = false;
             this.ApprovalGridView.AllowUserToOrderColumns = true;
-            this.ApprovalGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.ApprovalGridView.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
             this.ApprovalGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.ApprovalGridView.Location = new System.Drawing.Point(2, 2);
-            this.ApprovalGridView.Margin = new System.Windows.Forms.Padding(2);
+            this.ApprovalGridView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.ApprovalGridView.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.ApprovalGridView.Name = "ApprovalGridView";
             this.ApprovalGridView.ReadOnly = true;
             this.ApprovalGridView.RowHeadersWidth = 51;
             this.ApprovalGridView.RowTemplate.Height = 24;
-            this.ApprovalGridView.Size = new System.Drawing.Size(546, 471);
             this.ApprovalGridView.TabIndex = 6;
             this.ApprovalGridView.TabStop = false;
             // 
@@ -58,7 +54,6 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.ApprovalGridView);
             this.Name = "DataGridControl";
-            this.Size = new System.Drawing.Size(550, 475);
             ((System.ComponentModel.ISupportInitialize)(this.ApprovalGridView)).EndInit();
             this.ResumeLayout(false);
 

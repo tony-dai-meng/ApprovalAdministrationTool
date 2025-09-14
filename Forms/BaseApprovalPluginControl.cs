@@ -1,7 +1,10 @@
-﻿using McTools.Xrm.Connection;
+﻿using ApprovalAdministrationTool.Functions.ApprovalDataGrid;
+using McTools.Xrm.Connection;
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Deployment;
+using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using System;
 using System.Activities.Presentation.Metadata;
@@ -25,6 +28,7 @@ namespace ApprovalAdministrationTool
         public BaseApprovalPluginControl()
         {
             InitializeComponent();
+            this.Load += MyPluginControl_Load;
         }
 
         private void MyPluginControl_Load(object sender, EventArgs e)
@@ -37,12 +41,13 @@ namespace ApprovalAdministrationTool
             {
                 //mySettings = new Settings();
                 //LogWarning("Settings not found => a new settings file has been created!");
+                GetAccounts();
             }
             else
             {
                 //LogInfo("Settings found and loaded");
             }
-            ExecuteMethod(GetAccounts);
+            //ExecuteMethod(GetAccounts);
         }
 
         private void WhoAmI()
@@ -63,6 +68,14 @@ namespace ApprovalAdministrationTool
             MessageBox.Show("Settings have been reset to default.", "Settings Reset", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
+        private void splitContainer1_SplitterMoved(object sender, SplitterEventArgs e)
+        {
+
+        }
+
+        /// <summary>
+        /// Gets approvals from the connected environment and binds them to the DataGridView.
+        /// </summary>
         private void GetAccounts()
         {
             WorkAsync(new WorkAsyncInfo
@@ -99,11 +112,22 @@ namespace ApprovalAdministrationTool
                     var result = args.Result as EntityCollection;
                     if (result != null)
                     {
-                        MessageBox.Show($"Found {result.Entities.Count} approvals");
-                        myApprovals = GetDataTableFromEntityCollection(result);
+                        // Retrieve entity metadata to get attribute metadata
+                        var request = new RetrieveEntityRequest
+                        {
+                            EntityFilters = Microsoft.Xrm.Sdk.Metadata.EntityFilters.Attributes,
+                            LogicalName = result.EntityName
+                        };
+
+                        RetrieveEntityResponse response = (RetrieveEntityResponse)Service.Execute(request);
+                        Microsoft.Xrm.Sdk.AttributeCollection attr = new Microsoft.Xrm.Sdk.AttributeCollection(); //placeholder
+                        EntityMetadata resultMetadata = (EntityMetadata)response.Results.Values.First(); //get the entity metadata from the response
+                        ApprovalDataGrid approvalDataGrid = new ApprovalDataGrid(result, resultMetadata.Attributes); //instantiate the ApprovalDataGrid class
+                        myApprovals = approvalDataGrid.GetDataTable(); //get the approvals DataTable from the class
+
                         if (myApprovals.Rows.Count > 0)
                         {
-                            bindTable(ApprovalGridView, myApprovals);
+                            ApprovalDataGrid.bindTable((DataGridView)dataGridControl1.getDataGrid(), myApprovals);
                         }
                         else
                         {
@@ -114,48 +138,13 @@ namespace ApprovalAdministrationTool
             });
         }
 
-        private void bindTable(DataGridView dataGridView, DataTable dataTable)
-        {
-            if (dataTable != null && dataTable.Rows.Count > 0)
-            {
-                dataGridView.DataSource = dataTable;
-                
-                // Set the column headers to be more user-friendly
-                foreach (DataGridViewColumn column in ApprovalGridView.Columns)
-                {
-                    switch (column.Name)
-                    {
-                        case "msdyn_flow_approvalid":
-                            column.HeaderText = "Approval ID";
-                            break;
-                        case "msdyn_name":
-                            column.HeaderText = "Approval Name";
-                            break;
-                        case "msdyn_flowname":
-                            column.HeaderText = "Flow Name";
-                            break;
-                        case "msdyn_status":
-                            column.HeaderText = "Status";
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                
-                dataGridView.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
-            }
-            else
-            {
-                MessageBox.Show("No data available to bind to the DataGridView.");
-            }
-        }
-
+        /*
         /// <summary>
         /// This method converts an Entity Collection object to a DataTable object.
         /// </summary>
         /// <param name="entityCollection">The entity collection object</param>
         /// <returns></returns>
-        public static DataTable GetDataTableFromEntityCollection(EntityCollection entityCollection)
+        private DataTable GetDataTableFromEntityCollection(EntityCollection entityCollection)
         {
             // Init datatable
             DataTable dataTable = new DataTable("Entities");
@@ -186,7 +175,7 @@ namespace ApprovalAdministrationTool
                 dataTable.Rows.Add(row);
             }
             return dataTable;
-        }
+        }*/
 
         /// <summary>
         /// This event occurs when the plugin is closed
@@ -213,28 +202,13 @@ namespace ApprovalAdministrationTool
             }
         }
 
-        private void toolStripMenu_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
-        {
-
-        }
-
-        private void panel1_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void webBrowser1_DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)
-        {
-
-        }
-
+        /*
         // This method is called when the control is resized.
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
             var WindowWidth = this.Width;
             var WindowHeight = this.Height;
-
-        }
+        }*/
     }
 }

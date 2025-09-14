@@ -3,14 +3,14 @@
     partial class BaseApprovalPluginControl
     {
         /// <summary> 
-        /// Variable nécessaire au concepteur.
+        /// Required designer variable.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
         /// <summary> 
-        /// Nettoyage des ressources utilisées.
+        /// Clean up any resources being used.
         /// </summary>
-        /// <param name="disposing">true si les ressources managées doivent être supprimées ; sinon, false.</param>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -22,9 +22,9 @@
 
         #region Code généré par le Concepteur de composants
 
-        /// <summary> 
-        /// Méthode requise pour la prise en charge du concepteur - ne modifiez pas 
-        /// le contenu de cette méthode avec l'éditeur de code.
+        /// <summary>
+        /// Method required for designer support - do not modify 
+        /// the contents of this method with the code editor.
         /// </summary>
         private void InitializeComponent()
         {
@@ -32,13 +32,14 @@
             this.tsbClose = new System.Windows.Forms.ToolStripButton();
             this.tssSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.buttonResetSettings = new System.Windows.Forms.ToolStripButton();
-            this.ApprovalGridView = new System.Windows.Forms.DataGridView();
-            this.label1 = new System.Windows.Forms.Label();
-            this.webResourceContainer = new System.Windows.Forms.WebBrowser();
-            this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
+            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.dataGridControl1 = new ApprovalAdministrationTool.DataGridControl();
+            this.webContentControl1 = new ApprovalAdministrationTool.Controls.WebContentControl();
             this.toolStripMenu.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.ApprovalGridView)).BeginInit();
-            this.tableLayoutPanel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
+            this.splitContainer1.Panel1.SuspendLayout();
+            this.splitContainer1.Panel2.SuspendLayout();
+            this.splitContainer1.SuspendLayout();
             this.SuspendLayout();
             // 
             // toolStripMenu
@@ -50,10 +51,9 @@
             this.buttonResetSettings});
             this.toolStripMenu.Location = new System.Drawing.Point(0, 0);
             this.toolStripMenu.Name = "toolStripMenu";
-            this.toolStripMenu.Size = new System.Drawing.Size(732, 25);
+            this.toolStripMenu.Size = new System.Drawing.Size(630, 25);
             this.toolStripMenu.TabIndex = 4;
             this.toolStripMenu.Text = "toolStrip1";
-            this.toolStripMenu.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.toolStripMenu_ItemClicked);
             // 
             // tsbClose
             // 
@@ -77,91 +77,58 @@
             this.buttonResetSettings.ToolTipText = "Reset settings";
             this.buttonResetSettings.Click += new System.EventHandler(this.buttonResetSettings_Click);
             // 
-            // ApprovalGridView
+            // splitContainer1
             // 
-            this.ApprovalGridView.AllowUserToAddRows = false;
-            this.ApprovalGridView.AllowUserToDeleteRows = false;
-            this.ApprovalGridView.AllowUserToOrderColumns = true;
-            this.ApprovalGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitContainer1.Location = new System.Drawing.Point(0, 25);
+            this.splitContainer1.Margin = new System.Windows.Forms.Padding(2);
+            this.splitContainer1.Name = "splitContainer1";
+            // 
+            // splitContainer1.Panel1
+            // 
+            this.splitContainer1.Panel1.Controls.Add(this.dataGridControl1);
+            // 
+            // splitContainer1.Panel2
+            // 
+            this.splitContainer1.Panel2.Controls.Add(this.webContentControl1);
+            this.splitContainer1.Size = new System.Drawing.Size(630, 500);
+            this.splitContainer1.SplitterDistance = 387;
+            this.splitContainer1.SplitterIncrement = 2;
+            this.splitContainer1.TabIndex = 5;
+            this.splitContainer1.SplitterMoved += new System.Windows.Forms.SplitterEventHandler(this.splitContainer1_SplitterMoved);
+            // 
+            // dataGridControl1
+            // 
+            this.dataGridControl1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.ApprovalGridView.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
-            this.ApprovalGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.ApprovalGridView.Location = new System.Drawing.Point(2, 2);
-            this.ApprovalGridView.Margin = new System.Windows.Forms.Padding(2);
-            this.ApprovalGridView.Name = "ApprovalGridView";
-            this.ApprovalGridView.ReadOnly = true;
-            this.ApprovalGridView.RowHeadersWidth = 51;
-            this.tableLayoutPanel1.SetRowSpan(this.ApprovalGridView, 3);
-            this.ApprovalGridView.RowTemplate.Height = 24;
-            this.ApprovalGridView.Size = new System.Drawing.Size(429, 544);
-            this.ApprovalGridView.TabIndex = 5;
-            this.ApprovalGridView.TabStop = false;
+            this.dataGridControl1.Location = new System.Drawing.Point(0, 0);
+            this.dataGridControl1.Name = "dataGridControl1";
+            this.dataGridControl1.Size = new System.Drawing.Size(384, 497);
+            this.dataGridControl1.TabIndex = 0;
             // 
-            // label1
+            // webContentControl1
             // 
-            this.label1.AutoSize = true;
-            this.label1.BackColor = System.Drawing.SystemColors.Control;
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.ForeColor = System.Drawing.Color.RoyalBlue;
-            this.label1.Location = new System.Drawing.Point(4, 29);
-            this.label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(124, 17);
-            this.label1.TabIndex = 6;
-            this.label1.Text = "Type of Approval: ";
-            // 
-            // webResourceContainer
-            // 
-            this.webResourceContainer.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.tableLayoutPanel1.SetColumnSpan(this.webResourceContainer, 3);
-            this.webResourceContainer.Location = new System.Drawing.Point(435, 2);
-            this.webResourceContainer.Margin = new System.Windows.Forms.Padding(2);
-            this.webResourceContainer.MinimumSize = new System.Drawing.Size(15, 16);
-            this.webResourceContainer.Name = "webResourceContainer";
-            this.webResourceContainer.Size = new System.Drawing.Size(285, 504);
-            this.webResourceContainer.TabIndex = 7;
-            this.webResourceContainer.Url = new System.Uri("https://www.google.com", System.UriKind.Absolute);
-            this.webResourceContainer.DocumentCompleted += new System.Windows.Forms.WebBrowserDocumentCompletedEventHandler(this.webBrowser1_DocumentCompleted);
-            // 
-            // tableLayoutPanel1
-            // 
-            this.tableLayoutPanel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.tableLayoutPanel1.ColumnCount = 4;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 60.006F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.33133F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.33133F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.33133F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel1.Controls.Add(this.ApprovalGridView, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.webResourceContainer, 1, 0);
-            this.tableLayoutPanel1.Location = new System.Drawing.Point(7, 49);
-            this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-            this.tableLayoutPanel1.RowCount = 3;
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 0F));
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 40F));
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(722, 548);
-            this.tableLayoutPanel1.TabIndex = 8;
+            this.webContentControl1.Location = new System.Drawing.Point(3, 3);
+            this.webContentControl1.Name = "webContentControl1";
+            this.webContentControl1.Size = new System.Drawing.Size(170, 224);
+            this.webContentControl1.TabIndex = 0;
             // 
             // BaseApprovalPluginControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.tableLayoutPanel1);
-            this.Controls.Add(this.label1);
+            this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.toolStripMenu);
             this.Name = "BaseApprovalPluginControl";
-            this.Size = new System.Drawing.Size(732, 600);
+            this.Size = new System.Drawing.Size(630, 525);
             this.Load += new System.EventHandler(this.MyPluginControl_Load);
             this.toolStripMenu.ResumeLayout(false);
             this.toolStripMenu.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.ApprovalGridView)).EndInit();
-            this.tableLayoutPanel1.ResumeLayout(false);
+            this.splitContainer1.Panel1.ResumeLayout(false);
+            this.splitContainer1.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
+            this.splitContainer1.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -172,9 +139,8 @@
         private System.Windows.Forms.ToolStripButton tsbClose;
         private System.Windows.Forms.ToolStripButton buttonResetSettings;
         private System.Windows.Forms.ToolStripSeparator tssSeparator1;
-        private System.Windows.Forms.DataGridView ApprovalGridView;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.WebBrowser webResourceContainer;
-        private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
+        private System.Windows.Forms.SplitContainer splitContainer1;
+        private DataGridControl dataGridControl1;
+        private Controls.WebContentControl webContentControl1;
     }
 }

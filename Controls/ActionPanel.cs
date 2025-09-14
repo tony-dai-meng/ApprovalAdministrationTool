@@ -8,17 +8,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace ApprovalAdministrationTool
+namespace ApprovalAdministrationTool.Controls
 {
-    public partial class DataGridControl : UserControl
+    public partial class ActionPanel : UserControl
     {
-        public DataGridControl()
+        public ActionPanel()
         {
             InitializeComponent();
-        }
-        public DataGridView getDataGrid()
-        {
-            return ApprovalGridView;
         }
     }
 }
