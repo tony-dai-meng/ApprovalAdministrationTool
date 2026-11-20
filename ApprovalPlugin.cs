@@ -1,82 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.IO;
-using System.Linq;
-using System.Reflection;
+﻿using System.ComponentModel.Composition;
 using XrmToolBox.Extensibility;
 using XrmToolBox.Extensibility.Interfaces;
 
 namespace ApprovalAdministrationTool
 {
     // Do not forget to update version number and author (company attribute) in AssemblyInfo.cs class
+    // Categories are not ExportMetadata: they are set on the tool's Tool Library listing on xrmtoolbox.com when publishing.
+    // Planned: Power Automate, Processes, Security
+    // (Tool Library categories: Data, Customizations, Development, Configuration, Security, Migration, Solutions,
+    //  Troubleshooting, Documentation, Plugins, User Interface, Comparison, Processes, Reporting, Portal,
+    //  Power Automate, Power Pages, Power BI)
     [Export(typeof(IXrmToolBoxPlugin)),
         ExportMetadata("Name", "PA Approval Admin Tool"),
-        ExportMetadata("Description", "Empower your Approval Administration Functions: Delegate, Approve on behalf of another user and more!" +
-        "to be executed on behalf of other members of the organisation."),
-        // 32x32 and 80x80 base64 PNGs of Media\Images\ThumbsUp.png, kept in Other\PluginIcons.cs
+        ExportMetadata("Description", "Empower your Approval Administration Functions: Delegate, Approve on behalf of another user and more!"),
+        // 32x32 and 80x80 base64 PNGs of Media\Images\ThumbsUp.png, kept in Resources\PluginIcons.cs
         ExportMetadata("SmallImageBase64", PluginIcons.SmallImageBase64),
         ExportMetadata("BigImageBase64", PluginIcons.BigImageBase64),
-        ExportMetadata("BackgroundColor", "Lavender"),//"Lavender"),
+        ExportMetadata("BackgroundColor", "Lavender"),
         ExportMetadata("PrimaryFontColor", "Black"),
         ExportMetadata("SecondaryFontColor", "Gray")]
     public class ApprovalPlugin : PluginBase
     {
+        // If the tool ever ships a third-party DLL that XrmToolBox does not already provide, either merge it into this
+        // assembly (e.g. ILMerge) or add an AppDomain.AssemblyResolve handler that returns null when it cannot find the
+        // file. Never throw from that handler: it is shared by the whole XrmToolBox process and every other tool.
         public override IXrmToolBoxPluginControl GetControl()
         {
-            return new BaseApprovalPluginControl();
-        }
-
-        /// <summary>
-        /// Constructor 
-        /// </summary>
-        public ApprovalPlugin()
-        {
-            // If you have external assemblies that you need to load, uncomment the following to 
-            // hook into the event that will fire when an Assembly fails to resolve
-             AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(AssemblyResolveEventHandler);
-        }
-
-        /// <summary>
-        /// Event fired by CLR when an assembly reference fails to load
-        /// Assumes that related assemblies will be loaded from a subfolder named the same as the Plugin
-        /// For example, a folder named Sample.XrmToolBox.ApprovalPlugin 
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="args"></param>
-        /// <returns></returns>
-        private Assembly AssemblyResolveEventHandler(object sender, ResolveEventArgs args)
-        {
-            Assembly loadAssembly = null;
-            Assembly currAssembly = Assembly.GetExecutingAssembly();
-
-            // base name of the assembly that failed to resolve
-            var argName = args.Name.Substring(0, args.Name.IndexOf(","));
-
-            // check to see if the failing assembly is one that we reference.
-            List<AssemblyName> refAssemblies = currAssembly.GetReferencedAssemblies().ToList();
-            var refAssembly = refAssemblies.Where(a => a.Name == argName).FirstOrDefault();
-
-            // if the current unresolved assembly is referenced by our plugin, attempt to load
-            if (refAssembly != null)
-            {
-                // load from the path to this plugin assembly, not host executable
-                string dir = Path.GetDirectoryName(currAssembly.Location).ToLower();
-                string folder = Path.GetFileNameWithoutExtension(currAssembly.Location);
-                dir = Path.Combine(dir, folder);
-
-                var assmbPath = Path.Combine(dir, $"{argName}.dll");
-
-                if (File.Exists(assmbPath))
-                {
-                    loadAssembly = Assembly.LoadFrom(assmbPath);
-                }
-                else
-                {
-                    throw new FileNotFoundException($"Unable to locate dependency: {assmbPath}");
-                }
-            }
-            return loadAssembly;
+            return new ApprovalAdminControl();
         }
     }
 }

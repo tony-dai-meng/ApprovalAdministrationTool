@@ -1,6 +1,6 @@
 ﻿namespace ApprovalAdministrationTool
 {
-    partial class BaseApprovalPluginControl
+    partial class ApprovalAdminControl
     {
         /// <summary> 
         /// Required designer variable.
@@ -33,7 +33,7 @@
             this.tssSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.buttonResetSettings = new System.Windows.Forms.ToolStripButton();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.dataGridControl1 = new ApprovalAdministrationTool.DataGridControl();
+            this.dataGridControl1 = new ApprovalAdministrationTool.Controls.DataGridControl();
             this.webContentControl1 = new ApprovalAdministrationTool.Controls.WebContentControl();
             this.toolStripMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -95,7 +95,6 @@
             this.splitContainer1.SplitterDistance = 387;
             this.splitContainer1.SplitterIncrement = 2;
             this.splitContainer1.TabIndex = 5;
-            this.splitContainer1.SplitterMoved += new System.Windows.Forms.SplitterEventHandler(this.splitContainer1_SplitterMoved);
             // 
             // dataGridControl1
             // 
@@ -114,15 +113,16 @@
             this.webContentControl1.Size = new System.Drawing.Size(170, 224);
             this.webContentControl1.TabIndex = 0;
             // 
-            // BaseApprovalPluginControl
-            // 
+            // ApprovalAdminControl
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.toolStripMenu);
-            this.Name = "BaseApprovalPluginControl";
+            this.Name = "ApprovalAdminControl";
             this.Size = new System.Drawing.Size(630, 525);
-            this.Load += new System.EventHandler(this.MyPluginControl_Load);
+            this.OnCloseTool += new System.EventHandler(this.ApprovalAdminControl_OnCloseTool);
+            this.Load += new System.EventHandler(this.ApprovalAdminControl_Load);
             this.toolStripMenu.ResumeLayout(false);
             this.toolStripMenu.PerformLayout();
             this.splitContainer1.Panel1.ResumeLayout(false);
@@ -140,7 +140,7 @@
         private System.Windows.Forms.ToolStripButton buttonResetSettings;
         private System.Windows.Forms.ToolStripSeparator tssSeparator1;
         private System.Windows.Forms.SplitContainer splitContainer1;
-        private DataGridControl dataGridControl1;
+        private Controls.DataGridControl dataGridControl1;
         private Controls.WebContentControl webContentControl1;
     }
 }
