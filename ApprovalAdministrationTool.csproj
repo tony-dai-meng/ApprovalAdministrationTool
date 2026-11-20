@@ -121,7 +121,7 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Other\Enums.cs" />
-    <Compile Include="Other\PluginIconAttribute.cs" />
+    <Compile Include="Other\PluginIcons.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Controls\DataGridControl.cs">
@@ -147,8 +147,8 @@
     <EmbeddedResource Include="Controls\DataGridControl.resx">
       <DependentUpon>DataGridControl.cs</DependentUpon>
     </EmbeddedResource>
-    <!-- Tool icon: resized to 32x32 / 80x80 at runtime by PluginIconAttribute (see ApprovalPlugin.cs) -->
-    <EmbeddedResource Include="Media\Images\ThumbsUp.png" />
+    <!-- Source image for the tool icon; the 32x32 / 80x80 base64 versions are in Other\PluginIcons.cs -->
+    <None Include="Media\Images\ThumbsUp.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

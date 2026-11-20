@@ -14,9 +14,9 @@ namespace ApprovalAdministrationTool
         ExportMetadata("Name", "PA Approval Admin Tool"),
         ExportMetadata("Description", "Empower your Approval Administration Functions: Delegate, Approve on behalf of another user and more!" +
         "to be executed on behalf of other members of the organisation."),
-        // Icon: Media\Images\ThumbsUp.png (embedded resource), resized at runtime to the 32x32 SmallImageBase64
-        // and 80x80 BigImageBase64 metadata by PluginIconAttribute (Other\PluginIconAttribute.cs)
-        PluginIcon("ThumbsUp.png"),
+        // 32x32 and 80x80 base64 PNGs of Media\Images\ThumbsUp.png, kept in Other\PluginIcons.cs
+        ExportMetadata("SmallImageBase64", PluginIcons.SmallImageBase64),
+        ExportMetadata("BigImageBase64", PluginIcons.BigImageBase64),
         ExportMetadata("BackgroundColor", "Lavender"),//"Lavender"),
         ExportMetadata("PrimaryFontColor", "Black"),
         ExportMetadata("SecondaryFontColor", "Gray")]
