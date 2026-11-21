@@ -116,9 +116,12 @@
     <Compile Include="ApprovalAdminControl.Designer.cs">
       <DependentUpon>ApprovalAdminControl.cs</DependentUpon>
     </Compile>
+    <Compile Include="Models\ApprovalColumnDefinitions.cs" />
+    <Compile Include="Models\ApprovalColumnValues.cs" />
     <Compile Include="Models\ApprovalColumns.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources\PluginIcons.cs" />
+    <Compile Include="Resources\SymbolIcons.cs" />
     <Compile Include="Services\ApprovalService.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Controls\DataGridControl.cs">
@@ -127,6 +130,20 @@
     <Compile Include="Controls\DataGridControl.Designer.cs">
       <DependentUpon>DataGridControl.cs</DependentUpon>
     </Compile>
+    <Compile Include="Controls\DataGridControl.Filters.cs">
+      <DependentUpon>DataGridControl.cs</DependentUpon>
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\ColumnFilterPopup.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\TextBoxCueBanner.cs" />
+    <Compile Include="Controls\QueryEditorControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Services\ApprovalLoadResult.cs" />
+    <Compile Include="Services\ApprovalQuery.cs" />
+    <Compile Include="Services\FetchFilterValidator.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Controls\ActionPanel.resx">
