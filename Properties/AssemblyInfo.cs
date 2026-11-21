@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("ApprovalAdministrationTool")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Tony Dai")] // shown as "Author(s)" in XrmToolBox
 [assembly: AssemblyProduct("ApprovalAdministrationTool")]
 [assembly: AssemblyCopyright("Copyright ©  2025")]
 [assembly: AssemblyTrademark("")]
@@ -32,5 +32,7 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+// XrmToolBox shows this as the tool's version. Keep both values the same, and when publishing to the Tool Library
+// make the NuGet package version match it, otherwise XrmToolBox always reports an update as available.
+[assembly: AssemblyVersion("1.2026.11.1")]
+[assembly: AssemblyFileVersion("1.2026.11.1")]

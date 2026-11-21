@@ -1,4 +1,4 @@
-﻿namespace ApprovalAdministrationTool
+﻿namespace ApprovalAdministrationTool.Controls
 {
     partial class DataGridControl
     {
@@ -38,7 +38,7 @@
             this.ApprovalGridView.AllowUserToDeleteRows = false;
             this.ApprovalGridView.AllowUserToOrderColumns = true;
             this.ApprovalGridView.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
-            this.ApprovalGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.ApprovalGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             this.ApprovalGridView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.ApprovalGridView.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.ApprovalGridView.Name = "ApprovalGridView";
@@ -47,6 +47,11 @@
             this.ApprovalGridView.RowTemplate.Height = 24;
             this.ApprovalGridView.TabIndex = 6;
             this.ApprovalGridView.TabStop = false;
+            this.ApprovalGridView.CellPainting += new System.Windows.Forms.DataGridViewCellPaintingEventHandler(this.ApprovalGridView_CellPainting);
+            this.ApprovalGridView.ColumnWidthChanged += new System.Windows.Forms.DataGridViewColumnEventHandler(this.ApprovalGridView_ColumnWidthChanged);
+            this.ApprovalGridView.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.ApprovalGridView_ColumnHeaderMouseClick);
+            this.ApprovalGridView.CellMouseMove += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.ApprovalGridView_CellMouseMove);
+            this.ApprovalGridView.CellMouseLeave += new System.Windows.Forms.DataGridViewCellEventHandler(this.ApprovalGridView_CellMouseLeave);
             // 
             // DataGridControl
             // 
