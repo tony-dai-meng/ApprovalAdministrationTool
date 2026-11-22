@@ -261,6 +261,7 @@ namespace ApprovalAdministrationTool.Services
             {
                 message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
                 message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                message.Headers.Add("x-ms-client-request-id", Guid.NewGuid().ToString()); // the API refuses calls without one
                 message.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
                 using (var response = Http.SendAsync(message).GetAwaiter().GetResult())
