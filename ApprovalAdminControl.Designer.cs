@@ -45,6 +45,7 @@
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.dataGridControl1 = new ApprovalAdministrationTool.Controls.DataGridControl();
             this.webContentControl1 = new ApprovalAdministrationTool.Controls.WebContentControl();
+            this.actionPanel1 = new ApprovalAdministrationTool.Controls.ActionPanel();
             this.toolStripSearch.SuspendLayout();
             this.toolStripMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -187,6 +188,7 @@
             // splitContainer1.Panel2
             //
             this.splitContainer1.Panel2.Controls.Add(this.webContentControl1);
+            this.splitContainer1.Panel2.Controls.Add(this.actionPanel1);
             this.splitContainer1.Size = new System.Drawing.Size(630, 500);
             this.splitContainer1.SplitterDistance = 387;
             this.splitContainer1.SplitterIncrement = 2;
@@ -204,10 +206,20 @@
             //
             // webContentControl1
             //
-            this.webContentControl1.Location = new System.Drawing.Point(3, 3);
+            this.webContentControl1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.webContentControl1.Location = new System.Drawing.Point(0, 0);
             this.webContentControl1.Name = "webContentControl1";
-            this.webContentControl1.Size = new System.Drawing.Size(170, 224);
+            this.webContentControl1.Size = new System.Drawing.Size(239, 250);
             this.webContentControl1.TabIndex = 0;
+            //
+            // actionPanel1
+            //
+            this.actionPanel1.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.actionPanel1.Location = new System.Drawing.Point(0, 250);
+            this.actionPanel1.Name = "actionPanel1";
+            this.actionPanel1.Size = new System.Drawing.Size(239, 250);
+            this.actionPanel1.TabIndex = 1;
+            this.actionPanel1.ReassignRequested += new System.EventHandler(this.actionPanel1_ReassignRequested);
             //
             // ApprovalAdminControl
             //
@@ -252,5 +264,6 @@
         private System.Windows.Forms.SplitContainer splitContainer1;
         private Controls.DataGridControl dataGridControl1;
         private Controls.WebContentControl webContentControl1;
+        private Controls.ActionPanel actionPanel1;
     }
 }

@@ -39,6 +39,7 @@ namespace ApprovalAdministrationTool.Services
         {
             var metadata = GetColumnMetadata();
             var columns = ApprovalColumns.All
+                .Concat(ApprovalColumns.Hidden)
                 .Where(column => metadata.ContainsKey(column) || ApprovalColumns.Calculated.ContainsKey(column))
                 .ToList();
             var optionLabels = columns

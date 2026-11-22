@@ -19,6 +19,19 @@ namespace ApprovalAdministrationTool.Controls
             textBox.HandleCreated += (sender, e) => SendMessage(textBox.Handle, EM_SETCUEBANNER, (IntPtr)1, text);
         }
 
+        private const int CB_SETCUEBANNER = 0x1703;
+
+        /// <summary>Grey placeholder text in an empty editable combo box.</summary>
+        public static void SetComboBox(ComboBox comboBox, string text)
+        {
+            if (comboBox.IsHandleCreated)
+            {
+                SendMessage(comboBox.Handle, CB_SETCUEBANNER, IntPtr.Zero, text);
+            }
+
+            comboBox.HandleCreated += (sender, e) => SendMessage(comboBox.Handle, CB_SETCUEBANNER, IntPtr.Zero, text);
+        }
+
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, string lParam);
     }

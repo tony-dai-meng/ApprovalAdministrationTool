@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -60,6 +60,17 @@ namespace ApprovalAdministrationTool.Controls
                 filterIcon?.Dispose();
                 filterIconActive?.Dispose();
             };
+
+            // Tick-box column (DataGridControl.Selection.cs).
+            ApprovalGridView.CellFormatting += ApprovalGridView_CellFormatting;
+            ApprovalGridView.CellMouseClick += ApprovalGridView_CellMouseClick;
+            ApprovalGridView.KeyDown += ApprovalGridView_KeyDown;
+            ApprovalGridView.CurrentCellChanged += (sender, e) => RaisePreviewIfChanged();
+            ApprovalGridView.Sorted += (sender, e) =>
+            {
+                ApprovalGridView.InvalidateCell(-1, -1);
+                RaisePreviewIfChanged();
+            };
         }
 
         /// <summary>
@@ -79,10 +90,11 @@ namespace ApprovalAdministrationTool.Controls
             ApprovalGridView.Columns.Clear();
             ApprovalGridView.DataSource = approvals;
             EnsureSpacerColumn();
+            SetUpSelectColumn(approvals);
 
             foreach (DataGridViewColumn column in ApprovalGridView.Columns)
             {
-                if (column.Name == ApprovalColumns.Id || IsFriendlyValuesColumn(column))
+                if (column.Name == ApprovalColumns.Id || ApprovalColumns.Hidden.Contains(column.Name) || IsFriendlyValuesColumn(column))
                 {
                     column.Visible = false;
                 }
@@ -109,6 +121,10 @@ namespace ApprovalAdministrationTool.Controls
             SetHeaderTexts(useLogicalNames);
             FitHeaderHeight();
             ApplyFilters();
+
+            // Always tell the preview after a load: the same approval may have new content.
+            lastPreviewId = null;
+            RaisePreviewIfChanged();
         }
 
         /// <summary>
@@ -402,7 +418,7 @@ namespace ApprovalAdministrationTool.Controls
         /// </summary>
         private void ApprovalGridView_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
-            if (e.ColumnIndex < 0)
+            if (e.ColumnIndex < 0 || PaintSelectHeader(e))
             {
                 return;
             }
@@ -449,7 +465,7 @@ namespace ApprovalAdministrationTool.Controls
         private void FitHeaderHeight()
         {
             var tallestText = ApprovalGridView.Columns.Cast<DataGridViewColumn>()
-                .Where(column => column.Visible)
+                .Where(column => column.Visible && column.Name != SelectColumnName)
                 .Select(column =>
                 {
                     var font = column.HeaderCell.InheritedStyle.Font;

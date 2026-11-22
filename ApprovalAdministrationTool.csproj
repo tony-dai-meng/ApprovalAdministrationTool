@@ -50,6 +50,9 @@
     <PackageReference Include="Microsoft.IdentityModel" Version="7.0.0" />
     <PackageReference Include="Microsoft.Web.Xdt" Version="3.1.0" />
     <PackageReference Include="Markdig" Version="0.41.2" />
+    <!-- Sign-in to the Teams Approvals API (approvals.teams.microsoft.com) for Reassign. Not shipped with XrmToolBox,
+         so the post-build step copies it (and its dependency) into Plugins next to the tool. -->
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.61.3" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -72,6 +75,7 @@
     <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Net.Http" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
@@ -144,6 +148,18 @@
     <Compile Include="Services\ApprovalLoadResult.cs" />
     <Compile Include="Services\ApprovalQuery.cs" />
     <Compile Include="Services\FetchFilterValidator.cs" />
+    <Compile Include="Services\ReassignService.cs" />
+    <Compile Include="Services\TeamsApprovalsAuth.cs" />
+    <Compile Include="Controls\DataGridControl.Selection.cs">
+      <DependentUpon>DataGridControl.cs</DependentUpon>
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\ReassignDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Controls\ClientIdDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Controls\ActionPanel.resx">
@@ -172,6 +188,8 @@
       IF EXIST "$(TargetDir)Plugins\manifest.json" DEL /Q "$(TargetDir)Plugins\manifest.json"
       xcopy "$(TargetPath)" "$(TargetDir)Plugins\" /Y /Q
       xcopy "$(TargetDir)$(TargetName).pdb" "$(TargetDir)Plugins\" /Y /Q
+      xcopy "$(TargetDir)Microsoft.Identity.Client.dll" "$(TargetDir)Plugins\" /Y /Q
+      xcopy "$(TargetDir)Microsoft.IdentityModel.Abstractions.dll" "$(TargetDir)Plugins\" /Y /Q
       copy /Y "$(TargetPath).config" "$(TargetDir)XrmToolBox.exe.config"
       )</PostBuildEvent>
   </PropertyGroup>

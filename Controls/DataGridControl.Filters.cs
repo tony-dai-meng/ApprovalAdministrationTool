@@ -248,6 +248,8 @@ namespace ApprovalAdministrationTool.Controls
             if (ApprovalGridView.DataSource is DataTable table)
             {
                 table.DefaultView.RowFilter = FilterExpression(exceptColumn: null);
+                ApprovalGridView.InvalidateCell(-1, -1);
+                RaisePreviewIfChanged();
             }
         }
 

@@ -37,6 +37,12 @@ namespace ApprovalAdministrationTool.Models
             "msdyn_flow_approval_result",   // Result: the final outcome
         };
 
+        /// <summary>Details: the approval's Markdown body, shown rendered in the pane beside the grid.</summary>
+        public const string Details = "msdyn_flow_approval_details";
+
+        /// <summary>Columns read with the approvals (after <see cref="All"/>) but not shown as grid columns.</summary>
+        public static readonly IReadOnlyList<string> Hidden = new[] { Details };
+
         /// <summary>Columns calculated by the tool rather than read from the approval table, with their headers.</summary>
         public static readonly IReadOnlyDictionary<string, string> Calculated = new Dictionary<string, string>
         {
