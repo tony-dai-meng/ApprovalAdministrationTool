@@ -12,7 +12,8 @@ namespace ApprovalAdministrationTool.Controls
     /// <summary>
     /// The tick-box column for choosing several approvals. Ticks are kept by approval ID, so they survive sorting,
     /// filtering and reloads (approvals that no longer load are dropped). Clicking the column's header ticks or clears
-    /// every row shown; Space ticks the current row.
+    /// every row shown; Space ticks the current row. Finished approvals (abandoned, completed, cancelled, expired) cannot be
+    /// ticked, as there is nothing left to act on; their box is greyed out.
     /// </summary>
     public partial class DataGridControl
     {
@@ -67,7 +68,19 @@ namespace ApprovalAdministrationTool.Controls
                 : null;
         }
 
-        /// <summary>Adds the tick-box column (first, frozen) and drops ticks for approvals that are no longer loaded.</summary>
+        /// <summary>Whether the approval is loaded and not finished (abandoned, completed, cancelled or expired).</summary>
+        public bool IsOpen(Guid id)
+        {
+            var row = FindApproval(id);
+            return row != null && IsOpen(row);
+        }
+
+        private static bool IsOpen(DataRow row)
+        {
+            return !row.Table.Columns.Contains("statuscode") || !ApprovalColumns.FinishedStatuses.Contains(Convert.ToString(row["statuscode"]));
+        }
+
+        /// <summary>Adds the tick-box column (first, frozen) and drops ticks for approvals that are no longer loaded or have finished.</summary>
         private void SetUpSelectColumn(DataTable approvals)
         {
             if (!ApprovalGridView.Columns.Contains(SelectColumnName))
@@ -88,20 +101,22 @@ namespace ApprovalAdministrationTool.Controls
             select.DisplayIndex = 0;
             select.Frozen = true;
 
-            var loaded = new HashSet<Guid>(approvals.AsEnumerable()
-                .Where(row => row[ApprovalColumns.Id] is Guid)
+            var open = new HashSet<Guid>(approvals.AsEnumerable()
+                .Where(row => row[ApprovalColumns.Id] is Guid && IsOpen(row))
                 .Select(row => (Guid)row[ApprovalColumns.Id]));
-            if (checkedIds.RemoveWhere(id => !loaded.Contains(id)) > 0)
+            if (checkedIds.RemoveWhere(id => !open.Contains(id)) > 0)
             {
                 CheckedApprovalsChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
-        private static Guid? RowId(DataGridViewRow row)
+        private static Guid? RowId(DataGridViewRow row) => RowId(row, false);
+
+        private static Guid? RowId(DataGridViewRow row, bool onlyOpen)
         {
             try
             {
-                return row?.DataBoundItem is DataRowView view && view[ApprovalColumns.Id] is Guid id ? id : (Guid?)null;
+                return row?.DataBoundItem is DataRowView view && view[ApprovalColumns.Id] is Guid id && (!onlyOpen || IsOpen(view.Row)) ? id : (Guid?)null;
             }
             catch (IndexOutOfRangeException)
             {
@@ -113,6 +128,12 @@ namespace ApprovalAdministrationTool.Controls
         private IEnumerable<Guid> RowIds()
         {
             return ApprovalGridView.Rows.Cast<DataGridViewRow>().Select(RowId).Where(id => id.HasValue).Select(id => id.Value);
+        }
+
+        /// <summary>The IDs of the rows shown that can be ticked.</summary>
+        private List<Guid> OpenRowIds()
+        {
+            return ApprovalGridView.Rows.Cast<DataGridViewRow>().Select(row => RowId(row, true)).Where(id => id.HasValue).Select(id => id.Value).ToList();
         }
 
         private void ApprovalGridView_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -153,10 +174,10 @@ namespace ApprovalAdministrationTool.Controls
 
         private void ToggleRow(DataGridViewRow row)
         {
-            var id = RowId(row);
+            var id = RowId(row, true);
             if (!id.HasValue)
             {
-                return;
+                return; // finished approvals cannot be ticked
             }
 
             if (!checkedIds.Remove(id.Value))
@@ -168,10 +189,10 @@ namespace ApprovalAdministrationTool.Controls
             OnTicksChanged();
         }
 
-        /// <summary>Ticks every row shown, or clears them if they are all ticked already.</summary>
+        /// <summary>Ticks every row shown that can be ticked, or clears them if they are all ticked already.</summary>
         private void ToggleAllShown()
         {
-            var shown = RowIds().ToList();
+            var shown = OpenRowIds();
             if (shown.Count == 0)
             {
                 return;
@@ -230,17 +251,22 @@ namespace ApprovalAdministrationTool.Controls
             }
         }
 
-        /// <summary>Draws the tick-box column's header as a tick box: ticked when every row shown is ticked.</summary>
-        private bool PaintSelectHeader(DataGridViewCellPaintingEventArgs e)
+        /// <summary>
+        /// Draws the tick-box column's header as a tick box (ticked when every row that can be is ticked), and the boxes of
+        /// finished approvals greyed out.
+        /// </summary>
+        private bool PaintSelectColumn(DataGridViewCellPaintingEventArgs e)
         {
-            if (e.RowIndex != -1 || ApprovalGridView.Columns[e.ColumnIndex].Name != SelectColumnName)
+            if (ApprovalGridView.Columns[e.ColumnIndex].Name != SelectColumnName
+                || (e.RowIndex >= 0 && RowId(ApprovalGridView.Rows[e.RowIndex], true).HasValue))
             {
                 return false;
             }
 
             e.Paint(e.CellBounds, DataGridViewPaintParts.All & ~DataGridViewPaintParts.ContentForeground);
-            var shown = RowIds().ToList();
-            var state = shown.Count > 0 && shown.All(checkedIds.Contains)
+            var shown = e.RowIndex >= 0 ? new List<Guid>() : OpenRowIds();
+            var state = e.RowIndex >= 0 ? CheckBoxState.UncheckedDisabled
+                : shown.Count > 0 && shown.All(checkedIds.Contains)
                 ? CheckBoxState.CheckedNormal
                 : shown.Any(checkedIds.Contains) ? CheckBoxState.MixedNormal : CheckBoxState.UncheckedNormal;
             var size = CheckBoxRenderer.GetGlyphSize(e.Graphics, state);

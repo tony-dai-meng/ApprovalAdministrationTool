@@ -34,6 +34,7 @@ namespace ApprovalAdministrationTool.Controls
             this.RejectButton = new System.Windows.Forms.Button();
             this.ApproveButton = new System.Windows.Forms.Button();
             this.ReassignButton = new System.Windows.Forms.Button();
+            this.CancelButton = new System.Windows.Forms.Button();
             this.flowLayoutActionH.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -42,6 +43,7 @@ namespace ApprovalAdministrationTool.Controls
             this.flowLayoutActionH.Controls.Add(this.RejectButton);
             this.flowLayoutActionH.Controls.Add(this.ReassignButton);
             this.flowLayoutActionH.Controls.Add(this.ApproveButton);
+            this.flowLayoutActionH.Controls.Add(this.CancelButton);
             this.flowLayoutActionH.Dock = System.Windows.Forms.DockStyle.Fill;
             this.flowLayoutActionH.Location = new System.Drawing.Point(0, 0);
             this.flowLayoutActionH.Name = "flowLayoutActionH";
@@ -78,7 +80,6 @@ namespace ApprovalAdministrationTool.Controls
             this.ApproveButton.TabIndex = 0;
             this.ApproveButton.Text = "Approve";
             this.ApproveButton.UseVisualStyleBackColor = false;
-            this.ApproveButton.Click += new System.EventHandler(this.ApproveButton_Click);
             // 
             // ReassignButton
             // 
@@ -94,7 +95,21 @@ namespace ApprovalAdministrationTool.Controls
             this.ReassignButton.TabIndex = 2;
             this.ReassignButton.Text = "Reassign";
             this.ReassignButton.UseVisualStyleBackColor = false;
-            // 
+            //
+            // CancelButton
+            //
+            this.CancelButton.BackColor = System.Drawing.Color.Gray;
+            this.CancelButton.Enabled = false;
+            this.CancelButton.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.CancelButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.CancelButton.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(36)))), ((int)(((byte)(36)))));
+            this.CancelButton.Location = new System.Drawing.Point(328, 3);
+            this.CancelButton.Name = "CancelButton";
+            this.CancelButton.Size = new System.Drawing.Size(101, 51);
+            this.CancelButton.TabIndex = 3;
+            this.CancelButton.Text = "Cancel";
+            this.CancelButton.UseVisualStyleBackColor = false;
+            //
             // ActionsControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -113,5 +128,6 @@ namespace ApprovalAdministrationTool.Controls
         private System.Windows.Forms.Button ApproveButton;
         private System.Windows.Forms.Button RejectButton;
         private System.Windows.Forms.Button ReassignButton;
+        private System.Windows.Forms.Button CancelButton;
     }
 }

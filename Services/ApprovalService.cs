@@ -85,7 +85,8 @@ namespace ApprovalAdministrationTool.Services
         /// <summary>
         /// Who each approval is currently waiting on: the owners of its active approval requests. Power Automate creates one
         /// approval request (msdyn_flow_approvalrequest) per assigned approver, owned by that approver; a request stops being
-        /// active once it is answered or reassigned. Keyed by approval ID; names sorted, each person once.
+        /// active once it is answered or reassigned, but not when its approval is abandoned or cancelled, so only requests of
+        /// approvals that are still open count. Keyed by approval ID; names sorted, each person once.
         /// </summary>
         private Dictionary<Guid, List<EntityReference>> GetCurrentApprovers()
         {
@@ -96,6 +97,8 @@ namespace ApprovalAdministrationTool.Services
                 PageInfo = new PagingInfo { Count = 5000, PageNumber = 1 },
             };
             query.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0); // Active
+            query.AddLink(ApprovalColumns.EntityName, ApprovalLookup, ApprovalColumns.Id)
+                .LinkCriteria.AddCondition("statecode", ConditionOperator.Equal, 0);
 
             var approvers = new Dictionary<Guid, List<EntityReference>>();
             foreach (var request in RetrieveAll(query))

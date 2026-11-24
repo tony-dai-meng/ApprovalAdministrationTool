@@ -66,10 +66,11 @@ namespace ApprovalAdministrationTool
             UpdateActionButtons();
         }
 
-        /// <summary>Reassign can be clicked when an approval is ticked or selected.</summary>
+        /// <summary>The actions can be clicked when an approval that is still open is ticked or selected.</summary>
         private void UpdateActionButtons()
         {
-            actionPanel1.ReassignEnabled = dataGridControl1.CheckedApprovalIds.Count > 0 || dataGridControl1.PreviewApprovalId.HasValue;
+            actionPanel1.ActionsEnabled = dataGridControl1.CheckedApprovalIds.Count > 0
+                || (dataGridControl1.PreviewApprovalId is Guid current && dataGridControl1.IsOpen(current));
         }
 
         /// <summary>Renders the approval to preview (its details Markdown as HTML) in the pane on the right.</summary>
@@ -103,72 +104,96 @@ namespace ApprovalAdministrationTool
             SettingsManager.Instance.Save(GetType(), settings);
         }
 
-        // ---------------------------------------------------------------- reassign
+        // ---------------------------------------------------------------- actions
 
         /// <summary>
-        /// Reassign (action panel): reassigns the ticked approvals, or the current row's if none are ticked.
-        /// Finds their pending approvers, asks which to replace and with whom, gets a Teams Approvals token as the person
-        /// using the tool (saved sign-in first) and reassigns each request (<see cref="ReassignService.Reassign"/>), then reloads.
+        /// Approve, Reject, Reassign or Cancel (action panel): acts on the ticked approvals, or the current row's if none
+        /// are ticked. Looks up what can be acted on, asks for the comment (and the new approver when reassigning), gets a
+        /// Teams Approvals token as the person using the tool (saved sign-in first), does it and reloads.
         /// </summary>
-        private void actionPanel1_ReassignRequested(object sender, EventArgs e)
+        private void actionPanel1_ActionRequested(object sender, ApprovalAction action)
         {
             var ids = dataGridControl1.CheckedApprovalIds.ToList();
-            if (ids.Count == 0 && dataGridControl1.PreviewApprovalId is Guid current)
+            if (ids.Count == 0 && dataGridControl1.PreviewApprovalId is Guid current && dataGridControl1.IsOpen(current))
             {
                 ids.Add(current);
             }
 
             if (ids.Count == 0)
             {
-                MessageBox.Show("Tick the approvals to reassign (or select one).", "Reassign", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Tick the approvals (or select one) first.", action.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            var comments = actionPanel1.Comments;
             // XrmToolBox needs a named method (not a lambda) here, so it can run it again after asking for a connection.
-            ExecuteMethod(FindPendingRequests, Tuple.Create(ids, comments));
+            ExecuteMethod(FindTargets, Tuple.Create(action, ids));
         }
 
-        private void FindPendingRequests(Tuple<List<Guid>, string> request)
+        /// <summary>What an action can apply to, looked up in Dataverse.</summary>
+        private sealed class ActionTargets
         {
-            var (approvalIds, comments) = request;
+            public EnvironmentInfo Environment { get; set; }
+            public List<PendingRequest> Requests { get; set; }
+            public List<OpenApproval> Approvals { get; set; }
+            public List<UserOption> People { get; set; }
+        }
+
+        private void FindTargets(Tuple<ApprovalAction, List<Guid>> choice)
+        {
+            var (action, ids) = choice;
             WorkAsync(new WorkAsyncInfo
             {
-                Message = "Finding approvers and people...",
+                Message = action == ApprovalAction.Reassign ? "Finding approvers and people..." : "Checking the approvals...",
                 Work = (worker, args) =>
                 {
-                    var reassign = new ReassignService(Service);
-                    args.Result = Tuple.Create(reassign.GetEnvironment(), reassign.GetPendingRequests(approvalIds), reassign.GetPeople());
+                    var actions = new ApprovalActionService(Service);
+                    args.Result = new ActionTargets
+                    {
+                        Environment = actions.GetEnvironment(),
+                        Requests = action == ApprovalAction.Cancel ? null : actions.GetPendingRequests(ids),
+                        Approvals = action == ApprovalAction.Cancel ? actions.GetOpenApprovals(ids) : null,
+                        People = action == ApprovalAction.Reassign ? actions.GetPeople() : null,
+                    };
                 },
                 PostWorkCallBack = args =>
                 {
                     if (args.Error != null)
                     {
-                        ShowErrorDialog(args.Error, "Reassign");
+                        ShowErrorDialog(args.Error, action.ToString());
                         return;
                     }
 
-                    var (environment, requests, people) = (Tuple<EnvironmentInfo, List<PendingRequest>, List<UserOption>>)args.Result;
-                    ChooseAndReassign(approvalIds, environment, requests, people, comments);
+                    var targets = (ActionTargets)args.Result;
+                    foreach (var request in targets.Requests ?? new List<PendingRequest>())
+                    {
+                        // The approval request's lookup to its approval carries no name, so use the titles shown in the grid.
+                        request.ApprovalTitle = GridTitle(request.ApprovalId);
+                    }
+
+                    switch (action)
+                    {
+                        case ApprovalAction.Reassign: ChooseAndReassign(ids, targets); break;
+                        case ApprovalAction.Cancel: ChooseAndCancel(ids, targets); break;
+                        default: ChooseAndRespond(action, ids, targets); break;
+                    }
                 },
             });
         }
 
-        private async void ChooseAndReassign(List<Guid> approvalIds, EnvironmentInfo environment, List<PendingRequest> requests, List<UserOption> people, string comments)
+        private string GridTitle(Guid approvalId)
         {
-            // The approval request's lookup to its approval carries no name, so use the titles shown in the grid.
-            foreach (var request in requests)
-            {
-                if (dataGridControl1.FindApproval(request.ApprovalId)?["msdyn_flow_approval_title"] is string title && title.Length > 0)
-                {
-                    request.ApprovalTitle = title;
-                }
-            }
+            return dataGridControl1.FindApproval(approvalId)?["msdyn_flow_approval_title"] is string title && title.Length > 0 ? title : approvalId.ToString();
+        }
 
-            var skipped = approvalIds
-                .Where(id => requests.All(request => request.ApprovalId != id))
-                .Select(id => dataGridControl1.FindApproval(id)?["msdyn_flow_approval_title"] as string ?? id.ToString())
-                .ToList();
+        private static string Quantity(IReadOnlyCollection<string> titles)
+        {
+            return titles.Count == 1 ? "\"" + titles.First() + "\"" : titles.Count + " approvals";
+        }
+
+        private void ChooseAndReassign(List<Guid> ids, ActionTargets targets)
+        {
+            var requests = targets.Requests;
+            var skipped = ids.Where(id => requests.All(request => request.ApprovalId != id)).Select(GridTitle).ToList();
             if (requests.Count == 0)
             {
                 MessageBox.Show("None of the chosen approvals is waiting on anyone, so there is nothing to reassign.",
@@ -176,38 +201,81 @@ namespace ApprovalAdministrationTool
                 return;
             }
 
-            List<PendingRequest> chosen;
-            UserOption newApprover;
-            using (var dialog = new ReassignDialog(requests, skipped, people, comments))
+            using (var dialog = new ReassignDialog(requests, skipped, targets.People))
             {
                 if (dialog.ShowDialog(this) != DialogResult.OK)
                 {
                     return;
                 }
 
-                newApprover = dialog.NewApprover;
-                comments = dialog.Comments;
-                chosen = dialog.SelectedRequests.Where(request => request.Approver.Id != newApprover.Id).ToList();
+                var newApprover = dialog.NewApprover;
+                var comments = dialog.Comments;
+                var chosen = dialog.SelectedRequests.Where(request => request.Approver.Id != newApprover.Id).ToList();
+                Run("Reassign", "Reassigning", "reassigned to " + newApprover.Name, targets.Environment, chosen,
+                    request => request.ApprovalTitle + " (" + request.Approver.Name + ")",
+                    (actions, request, signedInUser, token) => actions.Reassign(request, newApprover, signedInUser, comments, targets.Environment, token));
             }
+        }
 
-            if (chosen.Count == 0)
+        /// <summary>Approve or Reject: answers the chosen approvers' requests.</summary>
+        private void ChooseAndRespond(ApprovalAction action, List<Guid> ids, ActionTargets targets)
+        {
+            var name = action.ToString(); // also the answer Teams expects
+            var requests = targets.Requests.Where(request => request.Accepts(name)).ToList();
+            var skipped = ids.Where(id => requests.All(request => request.ApprovalId != id))
+                .Select(id => GridTitle(id) + (targets.Requests.Any(request => request.ApprovalId == id) ? " (has custom responses)" : " (not waiting on anyone)"))
+                .ToList();
+            if (requests.Count == 0)
             {
-                MessageBox.Show(newApprover.Name + " is already the approver.", "Reassign", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("None of the chosen approvals can be answered with " + name + ":\n" + string.Join("\n", skipped),
+                    name, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            if (settings == null)
+            // An approval waiting on several people: choose whose request to answer.
+            var items = requests.Select(request => new RespondDialog.Item(request,
+                request.ApprovalTitle + "  \u2014  " + (request.Approver.Name ?? request.Approver.Id.ToString()),
+                requests.Count(other => other.ApprovalId == request.ApprovalId) == 1));
+            var titles = requests.GroupBy(request => request.ApprovalId).Select(group => group.First().ApprovalTitle).ToList();
+            using (var dialog = new RespondDialog(name + " " + Quantity(titles), name,
+                "The response is sent from your own sign-in, in place of the approver's. It cannot be undone.", name + " for", items, skipped))
             {
-                settings = new Settings();
-            }
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
 
-            var signIn = await GetTeamsApprovalsTokenAsync(environment.TenantId);
-            if (signIn == null)
+                var comments = dialog.Comments;
+                Run(name, action == ApprovalAction.Approve ? "Approving" : "Rejecting", action == ApprovalAction.Approve ? "approved" : "rejected",
+                    targets.Environment, dialog.Selected<PendingRequest>(),
+                    request => request.ApprovalTitle + " (" + request.Approver.Name + ")",
+                    (actions, request, signedInUser, token) => actions.Respond(request, name, signedInUser, comments, targets.Environment, token));
+            }
+        }
+
+        private void ChooseAndCancel(List<Guid> ids, ActionTargets targets)
+        {
+            var approvals = targets.Approvals;
+            var skipped = ids.Where(id => approvals.All(approval => approval.ApprovalId != id)).Select(id => GridTitle(id) + " (already finished)").ToList();
+            if (approvals.Count == 0)
             {
+                MessageBox.Show("None of the chosen approvals is still open, so there is nothing to cancel.", "Cancel approval", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            ReassignRequests(chosen, newApprover, comments, environment, signIn);
+            using (var dialog = new RespondDialog("Cancel " + Quantity(approvals.Select(approval => approval.Title).ToList()), "Cancel approval",
+                "Cancels for every approver and cannot be undone. Your comment is attached to the approval as admin_comment.txt.",
+                "Approvals to cancel", approvals.Select(approval => new RespondDialog.Item(approval, approval.Title, true)), skipped))
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
+
+                var comments = dialog.Comments;
+                Run("Cancel approval", "Cancelling", "cancelled", targets.Environment, dialog.Selected<OpenApproval>(), approval => approval.Title,
+                    (actions, approval, signedInUser, token) => actions.Cancel(approval, signedInUser, comments, targets.Environment, token));
+            }
         }
 
         /// <summary>
@@ -217,7 +285,7 @@ namespace ApprovalAdministrationTool
         /// registration's client ID is saved; one is asked for (with Entra's error) only if Entra refuses the client.
         /// Null if cancelled or if Entra refuses for another reason (shown to the user).
         /// </summary>
-        private async Task<AuthenticationResult> GetTeamsApprovalsTokenAsync(Guid tenantId)
+        private async Task<AuthenticationResult> GetTeamsApprovalsTokenAsync(Guid tenantId, string caption)
         {
             string error = null;
             while (true)
@@ -254,7 +322,7 @@ namespace ApprovalAdministrationTool
                 catch (MsalServiceException ex) when (IsAppRegistrationError(ex))
                 {
                     error = (string.IsNullOrEmpty(settings.TeamsApprovalsClientId)
-                        ? "Entra ID would not let Microsoft's Teams sign-in get this token, so Reassign needs your own app registration:\n"
+                        ? "Entra ID would not let Microsoft's Teams sign-in get this token, so this needs your own app registration:\n"
                         : "Entra ID rejected the app registration:\n") + FirstLine(ex.Message);
                 }
                 catch (Exception ex)
@@ -263,7 +331,7 @@ namespace ApprovalAdministrationTool
                         "Entra ID would not give you a token for the Teams Approvals API (" + TeamsApprovalsAuth.ApiBaseUrl + "):\n\n" + ex.Message +
                         "\n\nThe app registration needs a delegated permission on the Approvals API (with admin consent if required). " +
                         "If the Approvals API offers none in your tenant, only Microsoft's own apps can call it.",
-                        "Reassign", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        caption, MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return null;
                 }
             }
@@ -286,37 +354,54 @@ namespace ApprovalAdministrationTool
             return end < 0 ? text : text.Substring(0, end);
         }
 
-        private void ReassignRequests(List<PendingRequest> requests, UserOption newApprover, string comments, EnvironmentInfo environment, AuthenticationResult signIn)
+        /// <summary>Signs in, does an action to each target, shows a summary and reloads.</summary>
+        /// <param name="caption">The message boxes' title.</param>
+        /// <param name="doing">For the progress message, such as "Approving".</param>
+        /// <param name="done">For the summary, such as "approved".</param>
+        /// <param name="describe">How a target is named.</param>
+        /// <param name="act">Does it as the signed-in user with their token; returns a warning or null.</param>
+        private async void Run<T>(string caption, string doing, string done, EnvironmentInfo environment, List<T> targets, Func<T, string> describe,
+            Func<ApprovalActionService, T, UserOption, string, string> act)
         {
-            var accessToken = signIn.AccessToken;
+            if (settings == null)
+            {
+                settings = new Settings();
+            }
+
+            var signIn = await GetTeamsApprovalsTokenAsync(environment.TenantId, caption);
+            if (signIn == null)
+            {
+                return;
+            }
+
             WorkAsync(new WorkAsyncInfo
             {
-                Message = "Reassigning...",
+                Message = doing + "...",
                 Work = (worker, args) =>
                 {
-                    var reassign = new ReassignService(Service);
-                    var signedInUser = reassign.FindUser(signIn.Account.Username)
+                    var actions = new ApprovalActionService(Service);
+                    var signedInUser = actions.FindUser(signIn.Account.Username)
                         ?? throw new InvalidOperationException(
                             "You signed in to Teams Approvals as " + signIn.Account.Username + ", but no user in this environment " +
                             "has that sign-in name or email.");
 
                     var failures = new List<string>();
                     var warnings = new List<string>();
-                    for (var i = 0; i < requests.Count; i++)
+                    for (var i = 0; i < targets.Count; i++)
                     {
-                        var request = requests[i];
-                        worker.ReportProgress(100 * i / requests.Count, "Reassigning " + (i + 1) + " of " + requests.Count + ": " + request.ApprovalTitle);
+                        var target = targets[i];
+                        worker.ReportProgress(100 * i / targets.Count, doing + " " + (i + 1) + " of " + targets.Count + ": " + describe(target));
                         try
                         {
-                            var warning = reassign.Reassign(request, newApprover, signedInUser, comments, environment, accessToken);
+                            var warning = act(actions, target, signedInUser, signIn.AccessToken);
                             if (warning != null)
                             {
-                                warnings.Add(request.ApprovalTitle + ": " + warning);
+                                warnings.Add(describe(target) + ": " + warning);
                             }
                         }
                         catch (Exception ex)
                         {
-                            failures.Add(request.ApprovalTitle + " (" + request.Approver.Name + "): " + ex.Message);
+                            failures.Add(describe(target) + ": " + ex.Message);
                         }
                     }
 
@@ -327,16 +412,15 @@ namespace ApprovalAdministrationTool
                 {
                     if (args.Error != null)
                     {
-                        ShowErrorDialog(args.Error, "Reassign");
+                        ShowErrorDialog(args.Error, caption);
                         return;
                     }
 
                     var (failures, warnings) = (Tuple<List<string>, List<string>>)args.Result;
-                    var done = requests.Count - failures.Count;
-                    var summary = done + " of " + requests.Count + " request(s) reassigned to " + newApprover.Name + ".";
+                    var summary = (targets.Count - failures.Count) + " of " + targets.Count + " " + done + ".";
                     if (failures.Count > 0)
                     {
-                        summary += "\n\nNot reassigned:\n" + string.Join("\n\n", failures);
+                        summary += "\n\nNot " + done + ":\n" + string.Join("\n\n", failures);
                     }
 
                     if (warnings.Count > 0)
@@ -344,7 +428,7 @@ namespace ApprovalAdministrationTool
                         summary += "\n\nWarnings:\n" + string.Join("\n\n", warnings);
                     }
 
-                    MessageBox.Show(summary, "Reassign", MessageBoxButtons.OK,
+                    MessageBox.Show(summary, caption, MessageBoxButtons.OK,
                         failures.Count == 0 && warnings.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
 
                     ExecuteMethod(LoadApprovals);

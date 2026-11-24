@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using ApprovalAdministrationTool.Services;
 
 namespace ApprovalAdministrationTool.Controls
 {
@@ -15,20 +16,17 @@ namespace ApprovalAdministrationTool.Controls
         public ActionPanel()
         {
             InitializeComponent();
-            actionsControl1.ReassignClicked += (sender, e) => ReassignRequested?.Invoke(this, EventArgs.Empty);
+            actionsControl1.ActionClicked += (sender, action) => ActionRequested?.Invoke(this, action);
         }
 
-        /// <summary>Raised when the Reassign button is clicked.</summary>
-        public event EventHandler ReassignRequested;
+        /// <summary>Raised when an action's button is clicked. Its window then asks for the comment.</summary>
+        public event EventHandler<ApprovalAction> ActionRequested;
 
-        /// <summary>Whether the Reassign button can be clicked.</summary>
-        public bool ReassignEnabled
+        /// <summary>Whether the action buttons can be clicked.</summary>
+        public bool ActionsEnabled
         {
-            get => actionsControl1.ReassignEnabled;
-            set => actionsControl1.ReassignEnabled = value;
+            get => actionsControl1.ActionsEnabled;
+            set => actionsControl1.ActionsEnabled = value;
         }
-
-        /// <summary>The comments typed in the panel (sent with the action).</summary>
-        public string Comments => textBoxWithPlaceholder1.Text;
     }
 }

@@ -37,6 +37,9 @@ namespace ApprovalAdministrationTool.Models
             "msdyn_flow_approval_result",   // Result: the final outcome
         };
 
+        /// <summary>Status reasons of finished approvals (Completed, Expired, Canceled, Abandoned): there is nothing left to act on.</summary>
+        public static readonly ISet<string> FinishedStatuses = new HashSet<string> { "192350004", "192350005", "192350006", "192350007" };
+
         /// <summary>Details: the approval's Markdown body, shown rendered in the pane beside the grid.</summary>
         public const string Details = "msdyn_flow_approval_details";
 

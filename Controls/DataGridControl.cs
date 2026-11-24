@@ -418,7 +418,7 @@ namespace ApprovalAdministrationTool.Controls
         /// </summary>
         private void ApprovalGridView_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
-            if (e.ColumnIndex < 0 || PaintSelectHeader(e))
+            if (e.ColumnIndex < 0 || PaintSelectColumn(e))
             {
                 return;
             }

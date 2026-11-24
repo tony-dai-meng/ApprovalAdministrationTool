@@ -215,11 +215,11 @@
             // actionPanel1
             //
             this.actionPanel1.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.actionPanel1.Location = new System.Drawing.Point(0, 250);
+            this.actionPanel1.Location = new System.Drawing.Point(0, 443);
             this.actionPanel1.Name = "actionPanel1";
-            this.actionPanel1.Size = new System.Drawing.Size(239, 250);
+            this.actionPanel1.Size = new System.Drawing.Size(239, 57);
             this.actionPanel1.TabIndex = 1;
-            this.actionPanel1.ReassignRequested += new System.EventHandler(this.actionPanel1_ReassignRequested);
+            this.actionPanel1.ActionRequested += new System.EventHandler<ApprovalAdministrationTool.Services.ApprovalAction>(this.actionPanel1_ActionRequested);
             //
             // ApprovalAdminControl
             //

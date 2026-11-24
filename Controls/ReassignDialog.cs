@@ -14,7 +14,7 @@ namespace ApprovalAdministrationTool.Controls
     internal sealed class ReassignDialog : Form
     {
         private readonly List<UserOption> people;
-        private readonly TextBox commentsBox = new TextBox { Dock = DockStyle.Fill, Multiline = true, ScrollBars = ScrollBars.Vertical, Height = 80 };
+        private readonly TextBox commentsBox = new TextBox { Dock = DockStyle.Fill, Multiline = true, AcceptsReturn = true, ScrollBars = ScrollBars.Vertical, Height = 80 };
         private readonly ComboBox peopleBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDown, MaxDropDownItems = 15 };
         private readonly CheckedListBox requestList = new CheckedListBox { Dock = DockStyle.Fill, CheckOnClick = true, IntegralHeight = false, Height = 110 };
         private readonly Label status = new Label { AutoSize = true, ForeColor = SystemColors.GrayText, MaximumSize = new Size(500, 0) };
@@ -25,8 +25,7 @@ namespace ApprovalAdministrationTool.Controls
         /// <param name="requests">The pending approval requests of the chosen approvals.</param>
         /// <param name="approvalsWithoutRequests">Titles of chosen approvals with no pending approvers (skipped).</param>
         /// <param name="people">Who the approvals can be reassigned to.</param>
-        /// <param name="comments">The comments typed in the action panel, to start from.</param>
-        public ReassignDialog(IReadOnlyList<PendingRequest> requests, IReadOnlyList<string> approvalsWithoutRequests, List<UserOption> people, string comments)
+        public ReassignDialog(IReadOnlyList<PendingRequest> requests, IReadOnlyList<string> approvalsWithoutRequests, List<UserOption> people)
         {
             this.requests = requests;
             this.people = people;
@@ -87,7 +86,6 @@ namespace ApprovalAdministrationTool.Controls
             AcceptButton = okButton;
             CancelButton = cancelButton;
 
-            commentsBox.Text = comments ?? string.Empty;
             peopleBox.Items.AddRange(people.Cast<object>().ToArray());
             peopleBox.TextUpdate += (sender, e) => FilterPeople();
             peopleBox.SelectedIndexChanged += (sender, e) => { if (!filtering) UpdateOk(); };
