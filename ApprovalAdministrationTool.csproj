@@ -149,6 +149,14 @@
     <Compile Include="Services\ApprovalQuery.cs" />
     <Compile Include="Services\FetchFilterValidator.cs" />
     <Compile Include="Services\ApprovalActionService.cs" />
+    <Compile Include="Services\ApprovalFlowService.cs" />
+    <Compile Include="Services\ApprovalSteps.cs" />
+    <Compile Include="Services\ProfilePhotos.cs" />
+    <Compile Include="Services\ReminderService.cs" />
+    <Compile Include="Controls\ApprovalFlowHtml.cs" />
+    <Compile Include="Controls\FluentButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Services\TeamsApprovalsAuth.cs" />
     <Compile Include="Controls\DataGridControl.Selection.cs">
       <DependentUpon>DataGridControl.cs</DependentUpon>

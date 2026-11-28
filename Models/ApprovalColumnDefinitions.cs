@@ -115,13 +115,6 @@ namespace ApprovalAdministrationTool.Models
                 "other processes can find their own approvals: for example, a second flow that watches the Approvals table and " +
                 "filters on Source to pick up only the approvals it is responsible for.",
 
-            ["msdyn_flow_approval_stage"] =
-                "The approval’s stage, one of Not Specified, Basic or Complete. Microsoft’s description is only “the stage”, " +
-                "and the column is required. It is not the outcome: whether the approval was approved or rejected is in the " +
-                "Result column, and its overall state (Created, Pending, Suspended, Completed, Expired, Canceled or Abandoned) " +
-                "is in Status Reason. The same choice values are used by the Stage column of each Approval Step, and multi-stage " +
-                "approvals also link to their current stage through the Current Stage column.",
-
             ["currentstage"] =
                 "A link to the stage that a multi-stage approval is currently at. Microsoft describes it as “the link to the " +
                 "current stage of the multi stage approvals”; it points to a record in the Approval Stage Order table. " +

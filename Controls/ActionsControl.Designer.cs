@@ -31,10 +31,10 @@ namespace ApprovalAdministrationTool.Controls
         private void InitializeComponent()
         {
             this.flowLayoutActionH = new System.Windows.Forms.FlowLayoutPanel();
-            this.RejectButton = new System.Windows.Forms.Button();
-            this.ApproveButton = new System.Windows.Forms.Button();
-            this.ReassignButton = new System.Windows.Forms.Button();
-            this.CancelButton = new System.Windows.Forms.Button();
+            this.RejectButton = new ApprovalAdministrationTool.Controls.FluentButton();
+            this.ApproveButton = new ApprovalAdministrationTool.Controls.FluentButton();
+            this.ReassignButton = new ApprovalAdministrationTool.Controls.FluentButton();
+            this.CancelButton = new ApprovalAdministrationTool.Controls.FluentButton();
             this.flowLayoutActionH.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -53,62 +53,43 @@ namespace ApprovalAdministrationTool.Controls
             // 
             // RejectButton
             // 
-            //this.RejectButton.BackColor = System.Drawing.Color.White;
-            this.RejectButton.BackColor = System.Drawing.Color.Gray;
             this.RejectButton.Enabled = false;
-            this.RejectButton.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.RejectButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.RejectButton.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(36)))), ((int)(((byte)(36)))));
+            this.RejectButton.Font = new System.Drawing.Font("Segoe UI Semibold", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.RejectButton.Location = new System.Drawing.Point(3, 3);
             this.RejectButton.Name = "RejectButton";
             this.RejectButton.Size = new System.Drawing.Size(101, 51);
             this.RejectButton.TabIndex = 1;
             this.RejectButton.Text = "Reject";
-            this.RejectButton.UseVisualStyleBackColor = false;
             // 
             // ApproveButton
             // 
-            //this.ApproveButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(98)))), ((int)(((byte)(100)))), ((int)(((byte)(167)))));
-            this.ApproveButton.BackColor = System.Drawing.Color.Gray;
             this.ApproveButton.Enabled = false;
-            this.ApproveButton.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.ApproveButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ApproveButton.ForeColor = System.Drawing.Color.White;
+            this.ApproveButton.Font = new System.Drawing.Font("Segoe UI Semibold", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ApproveButton.Location = new System.Drawing.Point(217, 3);
             this.ApproveButton.Name = "ApproveButton";
             this.ApproveButton.Size = new System.Drawing.Size(105, 51);
             this.ApproveButton.TabIndex = 0;
             this.ApproveButton.Text = "Approve";
-            this.ApproveButton.UseVisualStyleBackColor = false;
             // 
             // ReassignButton
             // 
-            //this.ReassignButton.BackColor = System.Drawing.Color.White;
-            this.ReassignButton.BackColor = System.Drawing.Color.Gray;
             this.ReassignButton.Enabled = false;
-            this.ReassignButton.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.ReassignButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ReassignButton.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(36)))), ((int)(((byte)(36)))));
+            this.ReassignButton.Font = new System.Drawing.Font("Segoe UI Semibold", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ReassignButton.Location = new System.Drawing.Point(110, 3);
             this.ReassignButton.Name = "ReassignButton";
             this.ReassignButton.Size = new System.Drawing.Size(101, 51);
             this.ReassignButton.TabIndex = 2;
             this.ReassignButton.Text = "Reassign";
-            this.ReassignButton.UseVisualStyleBackColor = false;
             //
             // CancelButton
             //
-            this.CancelButton.BackColor = System.Drawing.Color.Gray;
             this.CancelButton.Enabled = false;
-            this.CancelButton.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.CancelButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.CancelButton.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(36)))), ((int)(((byte)(36)))));
+            this.CancelButton.Font = new System.Drawing.Font("Segoe UI Semibold", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CancelButton.Location = new System.Drawing.Point(328, 3);
             this.CancelButton.Name = "CancelButton";
             this.CancelButton.Size = new System.Drawing.Size(101, 51);
             this.CancelButton.TabIndex = 3;
             this.CancelButton.Text = "Cancel";
-            this.CancelButton.UseVisualStyleBackColor = false;
             //
             // ActionsControl
             // 
@@ -125,9 +106,9 @@ namespace ApprovalAdministrationTool.Controls
         #endregion
 
         private System.Windows.Forms.FlowLayoutPanel flowLayoutActionH;
-        private System.Windows.Forms.Button ApproveButton;
-        private System.Windows.Forms.Button RejectButton;
-        private System.Windows.Forms.Button ReassignButton;
-        private System.Windows.Forms.Button CancelButton;
+        private ApprovalAdministrationTool.Controls.FluentButton ApproveButton;
+        private ApprovalAdministrationTool.Controls.FluentButton RejectButton;
+        private ApprovalAdministrationTool.Controls.FluentButton ReassignButton;
+        private ApprovalAdministrationTool.Controls.FluentButton CancelButton;
     }
 }

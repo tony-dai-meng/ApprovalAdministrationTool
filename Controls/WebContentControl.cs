@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Net;
 using System.Windows.Forms;
@@ -27,7 +27,14 @@ namespace ApprovalAdministrationTool.Controls
             "blockquote{border-left:3px solid #c8c6c4;margin-left:0;padding-left:10px;color:#605e5c;}" +
             ".empty{color:#605e5c;font-style:italic;}";
 
+        private const string FlowElementId = "flow";
+
         private readonly WebBrowser browser;
+        private string pendingFlowHtml; // the flow chart for the last page set
+        private bool loading; // a page has been set and has not finished loading
+        private int pageNumber; // of the last page set, stamped on its body
+        private string page; // the last page set
+        private int reloads; // times the last page was set again because another replaced it
 
         public WebContentControl()
         {
@@ -42,11 +49,15 @@ namespace ApprovalAdministrationTool.Controls
                 WebBrowserShortcutsEnabled = true,
             };
             browser.Navigating += Browser_Navigating;
+            browser.DocumentCompleted += Browser_DocumentCompleted;
             Controls.Add(browser);
             ShowMessage("Select an approval to see its details.");
         }
 
-        /// <summary>Shows an approval: its title, an optional line under it, then its details rendered from Markdown.</summary>
+        /// <summary>
+        /// Shows an approval: its title, an optional line under it, room for its flow chart (see <see cref="ShowFlow"/>),
+        /// then its details rendered from Markdown.
+        /// </summary>
         public void ShowApproval(string title, string subtitle, string detailsMarkdown)
         {
             var body = "<h1 class=\"title\">" + WebUtility.HtmlEncode(title ?? string.Empty) + "</h1>";
@@ -55,6 +66,7 @@ namespace ApprovalAdministrationTool.Controls
                 body += "<p class=\"meta\">" + WebUtility.HtmlEncode(subtitle) + "</p>";
             }
 
+            body += "<div id=\"" + FlowElementId + "\"></div>";
             body += "<hr class=\"split\">";
             body += string.IsNullOrWhiteSpace(detailsMarkdown)
                 ? "<p class=\"empty\">This approval has no details.</p>"
@@ -68,12 +80,68 @@ namespace ApprovalAdministrationTool.Controls
             SetBody("<p class=\"empty\">" + WebUtility.HtmlEncode(message) + "</p>");
         }
 
+        /// <summary>
+        /// Puts the approval's flow chart (HTML from <see cref="ApprovalFlowHtml"/>) under its title, replacing the one
+        /// shown before, without reloading the page. Ignored if the pane is showing a message.
+        /// </summary>
+        internal void ShowFlow(string html)
+        {
+            pendingFlowHtml = html;
+            ApplyFlow();
+        }
+
+        /// <summary>The HTML in the flow chart's place (for tests), or null if there is none.</summary>
+        internal string FlowHtml => browser.Document?.GetElementById(FlowElementId)?.InnerHtml;
+
         private void SetBody(string body)
         {
-            browser.DocumentText =
+            pendingFlowHtml = null;
+            loading = true;
+            pageNumber++;
+            reloads = 0;
+            page =
                 "<!DOCTYPE html><html><head><meta charset=\"utf-8\">" +
                 "<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">" +
-                "<style>" + Style + "</style></head><body>" + body + "</body></html>";
+                "<style>" + Style + ApprovalFlowHtml.Style + "</style></head><body data-page=\"" + pageNumber + "\">" + body + "</body></html>";
+            browser.DocumentText = page;
+        }
+
+        /// <summary>
+        /// A page set while another is still loading can be lost, or overwritten by the older one (or by a blank page), so a
+        /// page that finishes loading and is not the last one set is replaced by it. Once the last one is in, its flow chart goes in too.
+        /// </summary>
+        private void Browser_DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)
+        {
+            // WebBrowser loads about:blank, then the page into it, and only reports the second; a blank page reported
+            // here is a leftover navigation that replaced the page.
+            var shown = browser.Document?.Body?.GetAttribute("data-page");
+            if (shown != pageNumber.ToString())
+            {
+                if (reloads++ < 3)
+                {
+                    browser.DocumentText = page;
+                }
+
+                return;
+            }
+
+            loading = false;
+            ApplyFlow();
+        }
+
+        /// <summary>Puts the chart into the page once the page has loaded.</summary>
+        private void ApplyFlow()
+        {
+            if (pendingFlowHtml == null || loading)
+            {
+                return; // DocumentCompleted calls again
+            }
+
+            var element = browser.Document?.GetElementById(FlowElementId);
+            if (element != null)
+            {
+                element.InnerHtml = pendingFlowHtml; // kept, in case the page has to be set again
+            }
         }
 
         /// <summary>Keeps the pane on the rendered details: links open in the default browser (or mail app) instead.</summary>

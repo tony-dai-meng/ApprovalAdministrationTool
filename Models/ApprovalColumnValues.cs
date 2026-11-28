@@ -27,7 +27,6 @@ namespace ApprovalAdministrationTool.Models
             "msdyn_flow_approval_modeltype",   // table name of the approval model
             "msdyn_flow_approval_requesttype", // choice
             "msdyn_flow_approval_priority",    // choice
-            "msdyn_flow_approval_stage",       // choice
             "currentstage",                    // lookup (stored value is the stage record's ID)
             "statuscode",                      // choice
         };

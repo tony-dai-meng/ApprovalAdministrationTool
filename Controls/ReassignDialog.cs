@@ -10,12 +10,14 @@ namespace ApprovalAdministrationTool.Controls
     /// <summary>
     /// The Reassign window: a comment box at the top, then a searchable dropdown of the environment's people to reassign
     /// to. If any chosen approval waits on several approvers, a list below lets you choose whose requests move.
+    /// People already in the approval's steps (a later step of a sequential approval, say) are greyed out with the reason:
+    /// Teams will not reassign to them.
     /// </summary>
     internal sealed class ReassignDialog : Form
     {
         private readonly List<UserOption> people;
         private readonly TextBox commentsBox = new TextBox { Dock = DockStyle.Fill, Multiline = true, AcceptsReturn = true, ScrollBars = ScrollBars.Vertical, Height = 80 };
-        private readonly ComboBox peopleBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDown, MaxDropDownItems = 15 };
+        private readonly ComboBox peopleBox = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDown, MaxDropDownItems = 15, DrawMode = DrawMode.OwnerDrawFixed };
         private readonly CheckedListBox requestList = new CheckedListBox { Dock = DockStyle.Fill, CheckOnClick = true, IntegralHeight = false, Height = 110 };
         private readonly Label status = new Label { AutoSize = true, ForeColor = SystemColors.GrayText, MaximumSize = new Size(500, 0) };
         private readonly Button okButton = new Button { Text = "Reassign", DialogResult = DialogResult.OK, AutoSize = true, Enabled = false };
@@ -90,6 +92,7 @@ namespace ApprovalAdministrationTool.Controls
             peopleBox.TextUpdate += (sender, e) => FilterPeople();
             peopleBox.SelectedIndexChanged += (sender, e) => { if (!filtering) UpdateOk(); };
             peopleBox.Leave += (sender, e) => PickTypedPerson();
+            peopleBox.DrawItem += DrawPerson;
             requestList.ItemCheck += (sender, e) => BeginInvoke(new Action(UpdateOk));
             TextBoxCueBanner.SetComboBox(peopleBox, "Type a name or email");
             Shown += (sender, e) => commentsBox.Focus();
@@ -159,18 +162,56 @@ namespace ApprovalAdministrationTool.Controls
             }
         }
 
+        /// <summary>
+        /// Why none of the ticked requests can go to this person (e.g. "already on step 3"), or null if at least one can.
+        /// </summary>
+        private string WhyNot(UserOption person, IReadOnlyList<PendingRequest> selected)
+        {
+            if (person == null || selected.Count == 0)
+            {
+                return null;
+            }
+
+            var reasons = selected.Select(request => request.WhyNotReassignTo(person.Id)).ToList();
+            return reasons.All(reason => reason != null) ? reasons.Distinct().Count() == 1 ? reasons[0] : "already in these approvals" : null;
+        }
+
+        /// <summary>Lists people as usual, but greyed out with the reason when the ticked requests cannot go to them.</summary>
+        private void DrawPerson(object sender, DrawItemEventArgs e)
+        {
+            e.DrawBackground();
+            if (e.Index < 0 || e.Index >= peopleBox.Items.Count)
+            {
+                return;
+            }
+
+            var person = (UserOption)peopleBox.Items[e.Index];
+            var why = WhyNot(person, SelectedRequests);
+            var selected = (e.State & DrawItemState.Selected) != 0;
+            var colour = why == null ? (selected ? SystemColors.HighlightText : e.ForeColor) : (selected ? SystemColors.HighlightText : SystemColors.GrayText);
+            var text = why == null ? person.ToString() : person.ToString() + "  —  " + why;
+            TextRenderer.DrawText(e.Graphics, text, e.Font, e.Bounds, colour, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+            e.DrawFocusRectangle();
+        }
+
         private void UpdateOk()
         {
             var newApprover = NewApprover;
             var selected = SelectedRequests;
-            okButton.Enabled = newApprover != null && selected.Any(request => request.Approver.Id != newApprover.Id);
-            if (newApprover != null && selected.Count > 0 && selected.All(request => request.Approver.Id == newApprover.Id))
+            var why = WhyNot(newApprover, selected);
+            okButton.Enabled = newApprover != null && selected.Count > 0 && why == null;
+            peopleBox.Invalidate(); // the greyed-out people depend on which requests are ticked
+            if (why != null)
             {
-                status.Text = newApprover.Name + " is already the approver.";
+                status.Text = why == "already the approver"
+                    ? newApprover.Name + " is already the approver."
+                    : newApprover.Name + " is " + why + ", and Teams won't reassign to someone already in an approval's steps. Pick someone else.";
             }
             else if (newApprover != null)
             {
-                status.Text = string.Empty;
+                var skipped = selected.Where(request => request.WhyNotReassignTo(newApprover.Id) != null).ToList();
+                status.Text = skipped.Count == 0 ? string.Empty
+                    : "Will not be reassigned (" + newApprover.Name + " is already in them): " + string.Join(", ", skipped.Select(request => request.ApprovalTitle).Distinct()) + ".";
             }
         }
 

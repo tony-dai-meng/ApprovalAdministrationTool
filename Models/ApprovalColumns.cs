@@ -16,6 +16,44 @@ namespace ApprovalAdministrationTool.Models
         /// <summary>Calculated: who the approval is waiting on (owners of its active approval requests).</summary>
         public const string CurrentlyWith = "currentlywith";
 
+        /// <summary>Approval Model Type: the kind of approval (the name of its approval-model table).</summary>
+        public const string ModelType = "msdyn_flow_approval_modeltype";
+
+        /// <summary>
+        /// Shown in Currently With for "Approve/Reject - Everyone must approve" approvals (<see cref="NotApplicableModelTypes"/>):
+        /// their answered requests stay active until the approval finishes. Who has answered is listed in the action windows.
+        /// </summary>
+        public const string NotApplicable = "N/A";
+
+        /// <summary>Approval model types whose Currently With shows <see cref="NotApplicable"/>: Approve/Reject - Everyone must approve.</summary>
+        public static readonly ISet<string> NotApplicableModelTypes = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+        {
+            "msdyn_flow_awaitallapprovalmodel",
+        };
+
+        /// <summary>
+        /// "Custom responses - Wait for all responses": Currently With lists the approvers on the current step who have not
+        /// responded yet (their answered requests also stay active, so responses are checked).
+        /// </summary>
+        public const string CustomWaitForAllModelType = "msdyn_flow_awaitallactionapprovalmodel";
+
+        /// <summary>
+        /// Approval model types with custom responses ("Wait for one response", "Wait for all responses"). Approve and
+        /// Reject mean nothing for them, so the panel shows one Action button instead.
+        /// </summary>
+        public static readonly ISet<string> CustomResponseModelTypes = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+        {
+            "msdyn_flow_actionapprovalmodel",
+            CustomWaitForAllModelType,
+        };
+
+        /// <summary>Approval model types that wait for everyone's response ("Everyone must approve", "Wait for all responses").</summary>
+        public static readonly ISet<string> WaitForAllModelTypes = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+        {
+            "msdyn_flow_awaitallapprovalmodel",
+            "msdyn_flow_awaitallactionapprovalmodel",
+        };
+
         public static readonly IReadOnlyList<string> All = new[]
         {
             Id,
@@ -31,8 +69,7 @@ namespace ApprovalAdministrationTool.Models
             "msdyn_flow_approval_priority",
             "msdyn_flow_approval_sendemail",
             "msdyn_flow_approval_source",
-            "msdyn_flow_approval_stage",
-            "currentstage",                 // Current Stage: lookup to the stage of a multi-stage approval
+            "currentstage",                // Current Stage: lookup to the stage of a multi-stage approval
             "statuscode",                   // Status Reason: Created, Pending, ... Completed, Expired, Canceled, Abandoned
             "msdyn_flow_approval_result",   // Result: the final outcome
         };

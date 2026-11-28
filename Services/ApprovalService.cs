@@ -86,7 +86,8 @@ namespace ApprovalAdministrationTool.Services
         /// Who each approval is currently waiting on: the owners of its active approval requests. Power Automate creates one
         /// approval request (msdyn_flow_approvalrequest) per assigned approver, owned by that approver; a request stops being
         /// active once it is answered or reassigned, but not when its approval is abandoned or cancelled, so only requests of
-        /// approvals that are still open count. Keyed by approval ID; names sorted, each person once.
+        /// approvals that are still open count. A sequential approval has the requests of all its steps from the start, so
+        /// only those of its current step count (<see cref="ApprovalSteps"/>). Keyed by approval ID; names sorted, each person once.
         /// </summary>
         private Dictionary<Guid, List<EntityReference>> GetCurrentApprovers()
         {
@@ -97,15 +98,25 @@ namespace ApprovalAdministrationTool.Services
                 PageInfo = new PagingInfo { Count = 5000, PageNumber = 1 },
             };
             query.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0); // Active
-            query.AddLink(ApprovalColumns.EntityName, ApprovalLookup, ApprovalColumns.Id)
-                .LinkCriteria.AddCondition("statecode", ConditionOperator.Equal, 0);
+            ApprovalSteps.LinkOpenApproval(query, ApprovalLookup);
+            query.LinkEntities[query.LinkEntities.Count - 1].Columns.AddColumn(ApprovalColumns.ModelType);
+
+            // "Custom responses - Wait for all responses" keeps answered requests active, so leave out who has responded.
+            var responded = GetCustomWaitForAllResponders();
 
             var approvers = new Dictionary<Guid, List<EntityReference>>();
             foreach (var request in RetrieveAll(query))
             {
                 var approval = request.GetAttributeValue<EntityReference>(ApprovalLookup);
                 var owner = request.GetAttributeValue<EntityReference>("ownerid");
-                if (approval == null || owner == null)
+                if (approval == null || owner == null || !ApprovalSteps.IsCurrent(request))
+                {
+                    continue;
+                }
+
+                var modelType = request.GetAttributeValue<AliasedValue>("approval." + ApprovalColumns.ModelType)?.Value as string;
+                if (string.Equals(modelType, ApprovalColumns.CustomWaitForAllModelType, StringComparison.OrdinalIgnoreCase)
+                    && responded.Contains(Tuple.Create(approval.Id, request.GetAttributeValue<int?>(ApprovalSteps.RequestStep) ?? 0, owner.Id)))
                 {
                     continue;
                 }
@@ -132,6 +143,36 @@ namespace ApprovalAdministrationTool.Services
             }
 
             return approvers;
+        }
+
+        /// <summary>
+        /// (approval, step, responder) for each response to an open "Custom responses - Wait for all responses" approval.
+        /// </summary>
+        private HashSet<Tuple<Guid, int, Guid>> GetCustomWaitForAllResponders()
+        {
+            const string ApprovalLookup = "msdyn_flow_approvalresponse_approval";
+            const string Step = "msdyn_flow_approvalresponse_stepnumber";
+            var query = new QueryExpression("msdyn_flow_approvalresponse")
+            {
+                ColumnSet = new ColumnSet(ApprovalLookup, Step, "ownerid"),
+                PageInfo = new PagingInfo { Count = 5000, PageNumber = 1 },
+            };
+            var link = query.AddLink(ApprovalColumns.EntityName, ApprovalLookup, ApprovalColumns.Id);
+            link.LinkCriteria.AddCondition("statecode", ConditionOperator.Equal, 0); // Active
+            link.LinkCriteria.AddCondition(ApprovalColumns.ModelType, ConditionOperator.Equal, ApprovalColumns.CustomWaitForAllModelType);
+
+            var responders = new HashSet<Tuple<Guid, int, Guid>>();
+            foreach (var response in RetrieveAll(query))
+            {
+                var approval = response.GetAttributeValue<EntityReference>(ApprovalLookup);
+                var owner = response.GetAttributeValue<EntityReference>("ownerid");
+                if (approval != null && owner != null)
+                {
+                    responders.Add(Tuple.Create(approval.Id, response.GetAttributeValue<int?>(Step) ?? 0, owner.Id));
+                }
+            }
+
+            return responders;
         }
 
         /// <summary>Runs a paged query and returns the records of every page.</summary>
@@ -251,7 +292,14 @@ namespace ApprovalAdministrationTool.Services
                 else if (logicalName == ApprovalColumns.CurrentlyWith)
                 {
                     // Stored: the approvers' IDs; friendly: their names. Empty when the approval is not waiting on anyone.
-                    if (currentApprovers.TryGetValue(approval.Id, out var approvers) && approvers.Count > 0)
+                    // N/A for "Approve/Reject - Everyone must approve": who has answered is shown in the action windows.
+                    if (currentApprovers.TryGetValue(approval.Id, out var waitingOn) && waitingOn.Count > 0
+                        && ApprovalColumns.NotApplicableModelTypes.Contains(approval.GetAttributeValue<string>(ApprovalColumns.ModelType) ?? string.Empty))
+                    {
+                        row[logicalName] = ApprovalColumns.NotApplicable;
+                        row[logicalName + ApprovalColumnValues.FriendlySuffix] = ApprovalColumns.NotApplicable;
+                    }
+                    else if (currentApprovers.TryGetValue(approval.Id, out var approvers) && approvers.Count > 0)
                     {
                         row[logicalName] = string.Join("; ", approvers.Select(approver => approver.Id.ToString()));
                         row[logicalName + ApprovalColumnValues.FriendlySuffix] = string.Join("; ", approvers.Select(approver => approver.Name ?? approver.Id.ToString()));

@@ -66,8 +66,10 @@ namespace ApprovalAdministrationTool.Services
         /// Call on the UI thread (the window is shown over <paramref name="owner"/>).
         /// </summary>
         /// <param name="userName">The XrmToolBox connection's account (sign-in name), or null to let the person choose.</param>
-        public async Task<AuthenticationResult> GetTokenAsync(string userName, IntPtr owner)
+        /// <param name="resource">Another Microsoft resource to get the token for (e.g. Microsoft Graph); the Teams Approvals API if null.</param>
+        public async Task<AuthenticationResult> GetTokenAsync(string userName, IntPtr owner, string resource = null)
         {
+            var scopes = resource == null ? Scopes : new[] { resource + "/.default" };
             var accounts = (await app.GetAccountsAsync().ConfigureAwait(true)).ToList();
             var account = string.IsNullOrEmpty(userName)
                 ? accounts.FirstOrDefault()
@@ -77,7 +79,7 @@ namespace ApprovalAdministrationTool.Services
             {
                 try
                 {
-                    return await app.AcquireTokenSilent(Scopes, account).ExecuteAsync().ConfigureAwait(true);
+                    return await app.AcquireTokenSilent(scopes, account).ExecuteAsync().ConfigureAwait(true);
                 }
                 catch (MsalUiRequiredException)
                 {
@@ -85,11 +87,37 @@ namespace ApprovalAdministrationTool.Services
                 }
             }
 
-            var interactive = app.AcquireTokenInteractive(Scopes).WithParentActivityOrWindow(owner);
+            var interactive = app.AcquireTokenInteractive(scopes).WithParentActivityOrWindow(owner);
             interactive = account != null
                 ? interactive.WithAccount(account)
                 : !string.IsNullOrEmpty(userName) ? interactive.WithLoginHint(userName) : interactive.WithPrompt(Prompt.SelectAccount);
             return await interactive.ExecuteAsync().ConfigureAwait(true);
+        }
+
+        /// <summary>
+        /// A token for another Microsoft resource (e.g. Microsoft Graph) from the saved sign-in, without ever showing a
+        /// window: null if there is no saved sign-in for <paramref name="userName"/> or it cannot be used for it.
+        /// </summary>
+        public async Task<string> GetTokenSilentlyAsync(string resource, string userName)
+        {
+            try
+            {
+                var accounts = (await app.GetAccountsAsync().ConfigureAwait(false)).ToList();
+                var account = string.IsNullOrEmpty(userName)
+                    ? accounts.FirstOrDefault()
+                    : accounts.FirstOrDefault(a => string.Equals(a.Username, userName, StringComparison.OrdinalIgnoreCase));
+                if (account == null)
+                {
+                    return null;
+                }
+
+                var result = await app.AcquireTokenSilent(new[] { resource + "/.default" }, account).ExecuteAsync().ConfigureAwait(false);
+                return result.AccessToken;
+            }
+            catch (MsalException)
+            {
+                return null;
+            }
         }
 
         private static string Protect(byte[] data)

@@ -21,6 +21,10 @@ namespace ApprovalAdministrationTool.Services
         Reject,
         Reassign,
         Cancel,
+        Remind,
+
+        /// <summary>Answer with a response picked per approval: the Action button, shown instead of Approve and Reject for custom responses.</summary>
+        Respond,
     }
 
     /// <summary>An approver's active approval request: the one row that is answered or handed to someone else.</summary>
@@ -34,10 +38,76 @@ namespace ApprovalAdministrationTool.Services
         /// <summary>The answers the approver can give, as stored: a JSON list such as ["Approve","Reject"].</summary>
         public string Options { get; set; }
 
+        /// <summary>
+        /// The other people this approval's open steps are with (user ID → 1-based step number): Teams will not reassign a
+        /// request to any of them. Includes others on this request's own step.
+        /// </summary>
+        public IDictionary<Guid, int> OthersInSteps { get; set; } = new Dictionary<Guid, int>();
+
+        /// <summary>Whether the approval has more than one step (a sequential approval).</summary>
+        public bool Sequential { get; set; }
+
+        /// <summary>Why this request cannot be reassigned to the user (e.g. "already on step 3"), or null if it can.</summary>
+        public string WhyNotReassignTo(Guid userId)
+        {
+            if (Approver != null && Approver.Id == userId)
+            {
+                return "already the approver";
+            }
+
+            return OthersInSteps.TryGetValue(userId, out var step) ? (Sequential ? "already on step " + step : "already an approver") : null;
+        }
+
+        /// <summary>Whether the approval waits for everyone's response (so the request may stay active after it was answered).</summary>
+        public bool WaitsForAll { get; set; }
+
+        /// <summary>For an approval that waits for everyone: who has responded (and how) and who has not, in one line; otherwise null.</summary>
+        public string ResponseSummary { get; set; }
+
         /// <summary>Whether this answer is one of the choices (approvals with custom responses have others).</summary>
         public bool Accepts(string response)
         {
-            return string.IsNullOrEmpty(Options) || Options.IndexOf("\"" + response + "\"", StringComparison.OrdinalIgnoreCase) >= 0;
+            return string.IsNullOrEmpty(Options) || Choices.Any(choice => string.Equals(choice, response, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>The answers the approver can give, read from <see cref="Options"/> (Approve and Reject when not stored).</summary>
+        public IReadOnlyList<string> Choices => ParseChoices(Options);
+
+        /// <summary>Whether the approval has custom responses (anything but exactly Approve and Reject).</summary>
+        public bool IsCustom
+        {
+            get
+            {
+                var choices = Choices;
+                return !(choices.Count == 2
+                    && choices.Any(c => string.Equals(c, "Approve", StringComparison.OrdinalIgnoreCase))
+                    && choices.Any(c => string.Equals(c, "Reject", StringComparison.OrdinalIgnoreCase)));
+            }
+        }
+
+        internal static IReadOnlyList<string> ParseChoices(string options)
+        {
+            if (!string.IsNullOrWhiteSpace(options))
+            {
+                try
+                {
+                    using (var stream = new System.IO.MemoryStream(Encoding.UTF8.GetBytes(options)))
+                    {
+                        var parsed = (string[])new System.Runtime.Serialization.Json.DataContractJsonSerializer(typeof(string[])).ReadObject(stream);
+                        var choices = parsed.Where(choice => !string.IsNullOrWhiteSpace(choice)).ToList();
+                        if (choices.Count > 0)
+                        {
+                            return choices;
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // Not a JSON list: treat as a basic approval.
+                }
+            }
+
+            return new[] { "Approve", "Reject" };
         }
     }
 
@@ -57,6 +127,29 @@ namespace ApprovalAdministrationTool.Services
         public string Email { get; set; }
 
         public override string ToString() => string.IsNullOrEmpty(Email) ? Name : Name + "  <" + Email + ">";
+    }
+
+    /// <summary>Who is using the tool, and whether they may use its actions.</summary>
+    internal sealed class AdminAccess
+    {
+        public Guid UserId { get; set; }
+        public string FullName { get; set; }
+
+        /// <summary>Whether they have the System Administrator role in this environment (directly or through a team).</summary>
+        public bool IsSystemAdministrator { get; set; }
+    }
+
+    /// <summary>
+    /// Keeps a record of rows the tool has assigned to the admin for an action, so they can be given back if the action
+    /// never finishes (XrmToolBox closed or crashed in the middle). Called off the UI thread.
+    /// </summary>
+    internal interface IBorrowJournal
+    {
+        /// <summary>Called just before <paramref name="row"/> is assigned from <paramref name="owner"/> to <paramref name="borrower"/>.</summary>
+        void Borrowed(EntityReference row, EntityReference owner, UserOption borrower, string title);
+
+        /// <summary>Called once the row is back with its owner.</summary>
+        void Returned(EntityReference row);
     }
 
     /// <summary>The Power Platform environment and tenant of the Dataverse connection.</summary>
@@ -81,6 +174,9 @@ namespace ApprovalAdministrationTool.Services
         private const string RequestApprovalLookup = "msdyn_flow_approvalrequest_approval";
         private const string RequestOptions = "msdyn_flow_approvalrequest_options";
         private const string ResponseEntity = "msdyn_flow_approvalresponse";
+        private const string ResponseApprovalLookup = "msdyn_flow_approvalresponse_approval";
+        private const string ResponseStep = "msdyn_flow_approvalresponse_stepnumber";
+        private const string ResponseValue = "msdyn_flow_approvalresponse_response";
         private const string ApprovalTitle = "msdyn_flow_approval_title";
         private const string AllowReassign = "msdyn_flow_approval_allowreassign";
         private const string AllowCancel = "msdyn_flow_approval_allowcancel";
@@ -90,11 +186,101 @@ namespace ApprovalAdministrationTool.Services
         private static readonly HttpClient Http = new HttpClient { BaseAddress = new Uri(TeamsApprovalsAuth.ApiBaseUrl) };
         private static int waitSeconds = 20; // how long a response or cancellation may take to appear in Dataverse
 
+        /// <summary>The role every System Administrator role copy (one per business unit) is made from.</summary>
+        public static readonly Guid SystemAdministratorRoleTemplate = new Guid("627090ff-40a3-4053-8790-584edc5be201");
+
         private readonly IOrganizationService service;
 
         public ApprovalActionService(IOrganizationService service)
         {
             this.service = service ?? throw new ArgumentNullException(nameof(service));
+        }
+
+        /// <summary>Records rows assigned to the admin for an action until they are given back; optional.</summary>
+        public IBorrowJournal Journal { get; set; }
+
+        /// <summary>
+        /// Who the connection's user is and whether they hold the System Administrator role in this environment, given to
+        /// them directly or through a team they are a member of.
+        /// </summary>
+        public AdminAccess GetAdminAccess()
+        {
+            var userId = ((WhoAmIResponse)service.Execute(new WhoAmIRequest())).UserId;
+            var user = service.Retrieve("systemuser", userId, new ColumnSet("fullname"));
+            return new AdminAccess
+            {
+                UserId = userId,
+                FullName = user.GetAttributeValue<string>("fullname") ?? userId.ToString(),
+                IsSystemAdministrator = HasRoleDirectly(userId) || HasRoleThroughTeam(userId),
+            };
+        }
+
+        private bool HasRoleDirectly(Guid userId)
+        {
+            var query = new QueryExpression("role") { ColumnSet = new ColumnSet(false), TopCount = 1 };
+            query.Criteria.AddCondition("roletemplateid", ConditionOperator.Equal, SystemAdministratorRoleTemplate);
+            var userRoles = query.AddLink("systemuserroles", "roleid", "roleid");
+            userRoles.LinkCriteria.AddCondition("systemuserid", ConditionOperator.Equal, userId);
+            return service.RetrieveMultiple(query).Entities.Count > 0;
+        }
+
+        private bool HasRoleThroughTeam(Guid userId)
+        {
+            var query = new QueryExpression("role") { ColumnSet = new ColumnSet(false), TopCount = 1 };
+            query.Criteria.AddCondition("roletemplateid", ConditionOperator.Equal, SystemAdministratorRoleTemplate);
+            var teamRoles = query.AddLink("teamroles", "roleid", "roleid");
+            var membership = teamRoles.AddLink("teammembership", "teamid", "teamid");
+            membership.LinkCriteria.AddCondition("systemuserid", ConditionOperator.Equal, userId);
+            return service.RetrieveMultiple(query).Entities.Count > 0;
+        }
+
+        /// <summary>The Microsoft Entra ID object IDs of the given Dataverse users (those that have one).</summary>
+        public Dictionary<Guid, Guid> GetEntraObjectIds(IEnumerable<Guid> userIds)
+        {
+            var ids = userIds.Distinct().Cast<object>().ToArray();
+            var result = new Dictionary<Guid, Guid>();
+            if (ids.Length == 0)
+            {
+                return result;
+            }
+
+            var query = new QueryExpression("systemuser") { ColumnSet = new ColumnSet("azureactivedirectoryobjectid") };
+            query.Criteria.AddCondition("systemuserid", ConditionOperator.In, ids);
+            foreach (var user in service.RetrieveMultiple(query).Entities)
+            {
+                if (user.GetAttributeValue<Guid?>("azureactivedirectoryobjectid") is Guid objectId && objectId != Guid.Empty)
+                {
+                    result[user.Id] = objectId;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Gives a row left with the admin back to its owner, if the admin still owns it.
+        /// </summary>
+        /// <returns>What happened, in a few words.</returns>
+        public string GiveBackLeftover(EntityReference row, EntityReference owner, Guid borrowerId)
+        {
+            Entity current;
+            try
+            {
+                current = service.Retrieve(row.LogicalName, row.Id, new ColumnSet("ownerid"));
+            }
+            catch (Exception ex)
+            {
+                return "could not be read (" + ex.Message + "); it may have been deleted";
+            }
+
+            var now = current.GetAttributeValue<EntityReference>("ownerid");
+            if (now?.Id != borrowerId)
+            {
+                return now?.Id == owner.Id ? "already back with " + (owner.Name ?? "its owner") : "now owned by someone else, left as it is";
+            }
+
+            SetOwner(row, owner);
+            return "given back to " + (owner.Name ?? owner.Id.ToString());
         }
 
         // ------------------------------------------------------------ lookups
@@ -106,7 +292,10 @@ namespace ApprovalAdministrationTool.Services
             return new EnvironmentInfo { EnvironmentId = detail.EnvironmentId, TenantId = Guid.Parse(detail.TenantId) };
         }
 
-        /// <summary>The active approval requests (one per approver still to respond) of those of the given approvals that are still open.</summary>
+        /// <summary>
+        /// The active approval requests (one per approver still to respond) of those of the given approvals that are still
+        /// open, on each approval's current step (a sequential approval's later steps wait their turn).
+        /// </summary>
         public List<PendingRequest> GetPendingRequests(IReadOnlyCollection<Guid> approvalIds)
         {
             var result = new List<PendingRequest>();
@@ -118,16 +307,23 @@ namespace ApprovalAdministrationTool.Services
             var query = new QueryExpression(RequestEntity) { ColumnSet = new ColumnSet(RequestApprovalLookup, "ownerid", RequestOptions) };
             query.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0); // Active
             query.Criteria.AddCondition(RequestApprovalLookup, ConditionOperator.In, approvalIds.Cast<object>().ToArray());
+            ApprovalSteps.LinkOpenApproval(query, RequestApprovalLookup);
+            query.LinkEntities[query.LinkEntities.Count - 1].Columns.AddColumn(ApprovalColumns.ModelType);
 
-            // A finished approval (abandoned, cancelled...) keeps its unanswered requests active, so check the approval too.
-            query.AddLink(ApprovalColumns.EntityName, RequestApprovalLookup, ApprovalColumns.Id)
-                .LinkCriteria.AddCondition("statecode", ConditionOperator.Equal, 0);
+            var all = service.RetrieveMultiple(query).Entities;
 
-            foreach (var request in service.RetrieveMultiple(query).Entities)
+            // Approvals that wait for everyone keep answered requests active, so their responses tell who has answered.
+            var waitForAll = new HashSet<Guid>(all
+                .Where(request => ApprovalColumns.WaitForAllModelTypes.Contains(request.GetAttributeValue<AliasedValue>("approval." + ApprovalColumns.ModelType)?.Value as string ?? string.Empty))
+                .Select(request => request.GetAttributeValue<EntityReference>(RequestApprovalLookup)?.Id ?? Guid.Empty));
+            var responses = GetResponses(waitForAll);
+
+            var summaries = new Dictionary<Guid, List<string>>();
+            foreach (var request in all)
             {
                 var approval = request.GetAttributeValue<EntityReference>(RequestApprovalLookup);
                 var owner = request.GetAttributeValue<EntityReference>("ownerid");
-                if (approval == null || owner == null)
+                if (approval == null || owner == null || !ApprovalSteps.IsCurrent(request))
                 {
                     continue;
                 }
@@ -137,6 +333,22 @@ namespace ApprovalAdministrationTool.Services
                     owner.Name = ownerName;
                 }
 
+                if (waitForAll.Contains(approval.Id))
+                {
+                    var step = request.GetAttributeValue<int?>(ApprovalSteps.RequestStep) ?? 0;
+                    var answered = responses.FirstOrDefault(response => response.ApprovalId == approval.Id && response.Step == step && response.OwnerId == owner.Id);
+                    if (!summaries.TryGetValue(approval.Id, out var lines))
+                    {
+                        summaries[approval.Id] = lines = new List<string>();
+                    }
+
+                    lines.Add((owner.Name ?? owner.Id.ToString()) + (answered.OwnerId == Guid.Empty ? ": waiting" : ": responded " + (answered.Value ?? "(no value)")));
+                    if (answered.OwnerId != Guid.Empty)
+                    {
+                        continue; // answered already: nothing left to answer or reassign
+                    }
+                }
+
                 result.Add(new PendingRequest
                 {
                     RequestId = request.Id,
@@ -144,10 +356,59 @@ namespace ApprovalAdministrationTool.Services
                     ApprovalTitle = approval.Name ?? (request.FormattedValues.TryGetValue(RequestApprovalLookup, out var title) ? title : approval.Id.ToString()),
                     Approver = owner,
                     Options = request.GetAttributeValue<string>(RequestOptions),
+                    WaitsForAll = waitForAll.Contains(approval.Id),
                 });
             }
 
+            foreach (var pending in result.Where(p => p.WaitsForAll))
+            {
+                pending.ResponseSummary = summaries.TryGetValue(pending.ApprovalId, out var lines) ? string.Join("; ", lines) : null;
+            }
+
+            // Who else each approval's steps are with (all steps' requests are active from the start).
+            foreach (var pending in result)
+            {
+                var siblings = all.Where(request => request.GetAttributeValue<EntityReference>(RequestApprovalLookup)?.Id == pending.ApprovalId).ToList();
+                pending.Sequential = siblings.Select(request => request.GetAttributeValue<int?>(ApprovalSteps.RequestStep) ?? 0).Distinct().Count() > 1;
+                foreach (var other in siblings.Where(request => request.Id != pending.RequestId))
+                {
+                    var owner = other.GetAttributeValue<EntityReference>("ownerid");
+                    var step = (other.GetAttributeValue<int?>(ApprovalSteps.RequestStep) ?? 0) + 1;
+                    if (owner != null && owner.Id != pending.Approver.Id && (!pending.OthersInSteps.TryGetValue(owner.Id, out var known) || step < known))
+                    {
+                        pending.OthersInSteps[owner.Id] = step;
+                    }
+                }
+            }
+
             return result;
+        }
+
+        /// <summary>
+        /// For approvals that wait for everyone: who has responded on which step, and what. A response given on someone's
+        /// behalf is owned by whoever gave it, so it counts for that person only.
+        /// </summary>
+        private List<(Guid ApprovalId, int Step, Guid OwnerId, string Value)> GetResponses(ICollection<Guid> approvalIds)
+        {
+            var list = new List<(Guid ApprovalId, int Step, Guid OwnerId, string Value)>();
+            if (approvalIds.Count == 0)
+            {
+                return list;
+            }
+
+            var query = new QueryExpression(ResponseEntity) { ColumnSet = new ColumnSet(ResponseApprovalLookup, ResponseStep, ResponseValue, "ownerid") };
+            query.Criteria.AddCondition(ResponseApprovalLookup, ConditionOperator.In, approvalIds.Cast<object>().ToArray());
+            foreach (var response in service.RetrieveMultiple(query).Entities)
+            {
+                var approval = response.GetAttributeValue<EntityReference>(ResponseApprovalLookup);
+                var owner = response.GetAttributeValue<EntityReference>("ownerid");
+                if (approval != null && owner != null)
+                {
+                    list.Add((approval.Id, response.GetAttributeValue<int?>(ResponseStep) ?? 0, owner.Id, response.GetAttributeValue<string>(ResponseValue)));
+                }
+            }
+
+            return list;
         }
 
         /// <summary>Those of the given approvals that are still open.</summary>
@@ -230,7 +491,9 @@ namespace ApprovalAdministrationTool.Services
         // ------------------------------------------------------------ actions
 
         /// <summary>
-        /// Reassigns one approval request to <paramref name="newApprover"/>:
+        /// Reassigns one approval request (of the approval's current step) to <paramref name="newApprover"/>:
+        /// 0. refuses, before changing anything, if the request was answered, reassigned or left behind by a later step meanwhile,
+        ///    or if <paramref name="newApprover"/> is already in one of the approval's steps (Teams refuses that);
         /// 1. switches on Allow Reassign on the approval (and its request, if that table has the column) when off;
         /// 2. assigns the request to <paramref name="caller"/> (the person signed in to Teams Approvals) in Dataverse, unless it already owns it;
         /// 3. POSTs /api/reassignApproval with the Teams Approvals token;
@@ -241,12 +504,14 @@ namespace ApprovalAdministrationTool.Services
         /// <returns>Null, or a warning if the reassignment worked but step 4 failed.</returns>
         public string Reassign(PendingRequest request, UserOption newApprover, UserOption caller, string comments, EnvironmentInfo environment, string accessToken)
         {
-            var row = new EntityReference(RequestEntity, request.RequestId);
+            var row = new EntityReference(RequestEntity, request.RequestId) { Name = request.ApprovalTitle };
             EntityReference recordOwner;
             var undo = new List<Action>();
             try
             {
-                var approval = service.Retrieve(ApprovalColumns.EntityName, request.ApprovalId, new ColumnSet(AllowReassign, "ownerid"));
+                var approval = service.Retrieve(ApprovalColumns.EntityName, request.ApprovalId, new ColumnSet(AllowReassign, "ownerid", ApprovalSteps.CurrentStep));
+                CheckStillWaiting(request, approval);
+                CheckNotInSteps(request, newApprover);
                 recordOwner = approval.GetAttributeValue<EntityReference>("ownerid");
                 SwitchOn(approval, AllowReassign, undo);
 
@@ -287,12 +552,8 @@ namespace ApprovalAdministrationTool.Services
         /// <returns>Null, or a warning if it was answered but step 3 did not go as expected.</returns>
         public string Respond(PendingRequest request, string response, UserOption caller, string comments, EnvironmentInfo environment, string accessToken)
         {
-            var row = new EntityReference(RequestEntity, request.RequestId);
-            var current = service.Retrieve(RequestEntity, request.RequestId, new ColumnSet("ownerid", "statecode"));
-            if (current.GetAttributeValue<OptionSetValue>("statecode")?.Value != 0 || current.GetAttributeValue<EntityReference>("ownerid")?.Id != request.Approver.Id)
-            {
-                throw new InvalidOperationException("It was answered or reassigned by someone else in the meantime. Refresh and try again.");
-            }
+            var row = new EntityReference(RequestEntity, request.RequestId) { Name = request.ApprovalTitle };
+            CheckStillWaiting(request, service.Retrieve(ApprovalColumns.EntityName, request.ApprovalId, new ColumnSet(ApprovalSteps.CurrentStep)));
 
             // The API is told the approval but not the request, so it could not tell the caller's own request from this one.
             if (request.Approver.Id != caller.Id && HasOtherRequest(request, caller))
@@ -339,7 +600,7 @@ namespace ApprovalAdministrationTool.Services
         /// <returns>Null, or a warning if it was cancelled but step 4 did not go as expected.</returns>
         public string Cancel(OpenApproval approval, UserOption caller, string comments, EnvironmentInfo environment, string accessToken)
         {
-            var row = new EntityReference(ApprovalColumns.EntityName, approval.ApprovalId);
+            var row = new EntityReference(ApprovalColumns.EntityName, approval.ApprovalId) { Name = approval.Title };
             var undo = new List<Action>();
             try
             {
@@ -408,8 +669,22 @@ namespace ApprovalAdministrationTool.Services
         {
             if (owner.Id != caller.Id)
             {
-                SetOwner(row, new EntityReference("systemuser", caller.Id));
-                undo.Add(() => SetOwner(row, owner));
+                Journal?.Borrowed(row, owner, caller, row.Name);
+                try
+                {
+                    SetOwner(row, new EntityReference("systemuser", caller.Id));
+                }
+                catch
+                {
+                    Journal?.Returned(row); // never assigned
+                    throw;
+                }
+
+                undo.Add(() =>
+                {
+                    SetOwner(row, owner);
+                    Journal?.Returned(row);
+                });
             }
         }
 
@@ -439,6 +714,7 @@ namespace ApprovalAdministrationTool.Services
             try
             {
                 SetOwner(row, owner);
+                Journal?.Returned(row);
                 return null;
             }
             catch (Exception ex)
@@ -474,6 +750,45 @@ namespace ApprovalAdministrationTool.Services
             {
                 return "Done, but could not make sure the approval is still owned by " + (owner.Name ?? owner.Id.ToString()) + ": " + ex.Message;
             }
+        }
+
+        /// <summary>
+        /// Refuses (before anything changes) a request that is no longer waiting: answered or reassigned by someone else,
+        /// or no longer on the approval's current step, since the list was loaded.
+        /// </summary>
+        private void CheckStillWaiting(PendingRequest request, Entity approval)
+        {
+            var current = service.Retrieve(RequestEntity, request.RequestId, new ColumnSet("ownerid", "statecode", ApprovalSteps.RequestStep));
+            if (current.GetAttributeValue<OptionSetValue>("statecode")?.Value != 0 || current.GetAttributeValue<EntityReference>("ownerid")?.Id != request.Approver.Id)
+            {
+                throw new InvalidOperationException("It was answered or reassigned by someone else in the meantime. Refresh and try again.");
+            }
+
+            ApprovalSteps.CheckCurrent(current, approval);
+        }
+
+        /// <summary>
+        /// Refuses (before anything changes) a new approver who already has an open request on the approval, on any step:
+        /// Teams refuses to reassign to someone already in the approval's steps.
+        /// </summary>
+        private void CheckNotInSteps(PendingRequest request, UserOption newApprover)
+        {
+            var query = new QueryExpression(RequestEntity) { ColumnSet = new ColumnSet(ApprovalSteps.RequestStep) };
+            query.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0);
+            query.Criteria.AddCondition(RequestApprovalLookup, ConditionOperator.Equal, request.ApprovalId);
+            query.Criteria.AddCondition("ownerid", ConditionOperator.Equal, newApprover.Id);
+            query.Criteria.AddCondition("msdyn_flow_approvalrequestid", ConditionOperator.NotEqual, request.RequestId);
+            var steps = service.RetrieveMultiple(query).Entities.Select(other => (other.GetAttributeValue<int?>(ApprovalSteps.RequestStep) ?? 0) + 1).ToList();
+            if (steps.Count > 0)
+            {
+                throw new InvalidOperationException(InStepsMessage(newApprover.Name, request.Sequential || steps.Any(step => step > 1) ? steps.Min() : (int?)null));
+            }
+        }
+
+        private static string InStepsMessage(string name, int? step)
+        {
+            return (name ?? "They") + " is already " + (step.HasValue ? "on step " + step + " of this approval" : "an approver of this approval")
+                + ", and Teams won't reassign to someone already in its steps. Pick someone else.";
         }
 
         private bool HasOtherRequest(PendingRequest request, UserOption user)
@@ -578,6 +893,11 @@ namespace ApprovalAdministrationTool.Services
                     if (!response.IsSuccessStatusCode)
                     {
                         var details = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                        if (details != null && details.IndexOf("ApprovalRequestReassignmentUserCurrentlyInSteps", StringComparison.Ordinal) >= 0)
+                        {
+                            throw new InvalidOperationException(InStepsMessage("The person picked", null)); // caught before calling, unless it changed meanwhile
+                        }
+
                         throw new InvalidOperationException(
                             "The Teams Approvals API refused it (" + (int)response.StatusCode + " " + response.ReasonPhrase + ")."
                             + (string.IsNullOrWhiteSpace(details) ? string.Empty : "\n" + details));
